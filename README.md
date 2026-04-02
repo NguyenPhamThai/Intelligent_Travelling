@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # World Monitor
 
 **Real-time global intelligence dashboard** — AI-powered news aggregation, geopolitical monitoring, and infrastructure tracking in a unified situational awareness interface.
@@ -165,3 +166,6 @@ See our [Security Policy](./SECURITY.md) for responsible disclosure guidelines.
    <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=koala73/worldmonitor&type=Date&type=Date" />
  </picture>
 </a>
+=======
+# Intelligent_Travelling
+>>>>>>> 137264b68fcf4cf0c271a03bb48249e6b98bf8db
