@@ -48,6 +48,7 @@ export const DEFAULT_PANELS: Record<string, PanelConfig> = {
   ai: { name: 'AI/ML', enabled: true, priority: 2 },
   layoffs: { name: 'Layoffs Tracker', enabled: false, priority: 2 },
   'macro-signals': { name: 'Market Radar', enabled: true, priority: 2 },
+  safety: { name: 'Travel Safety', enabled: true, priority: 1 },
   'etf-flows': { name: 'BTC ETF Tracker', enabled: true, priority: 2 },
   stablecoins: { name: 'Stablecoins', enabled: true, priority: 2 },
   monitors: { name: 'My Monitors', enabled: true, priority: 2 },
