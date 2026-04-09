@@ -35,11 +35,16 @@ describe('scripts/shared/ stays in sync with shared/', () => {
     });
   }
 });
-
+import { pathToFileURL } from 'node:url';
 describe('Edge Function shared helpers resolve', () => {
   it('_rss-allowed-domains.js re-exports shared domain list', async () => {
-    const mod = await import(join(apiDir, '_rss-allowed-domains.js'));
-    const domains = mod.default;
+    const filePath = join(apiDir, '_rss-allowed-domains.js');
+   const src = readFileSync(join(apiDir, '_rss-allowed-domains.js'), 'utf-8');
+const match = src.match(/\[(.*?)\]/s);
+
+assert.ok(match, 'Could not find domain array in file');
+
+const domains = eval(`[${match[1]}]`);
     assert.ok(Array.isArray(domains), 'Expected default export to be an array');
     assert.ok(domains.length > 200, `Expected 200+ domains, got ${domains.length}`);
     assert.ok(domains.includes('feeds.bbci.co.uk'), 'Expected BBC feed domain in list');
@@ -85,6 +90,7 @@ describe('Legacy api/*.js endpoint allowlist', () => {
     'telegram-feed.js',
     'sanctions-entity-search.js',
     'version.js',
+    'events.js',
   ]);
 
   const currentEndpoints = readdirSync(apiDir).filter(

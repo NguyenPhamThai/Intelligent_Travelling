@@ -33,9 +33,28 @@ function isIgnored(filename) {
   });
 }
 
-const docFiles = readdirSync(DOCS_DIR)
-  .filter(f => (f.endsWith('.mdx') || f.endsWith('.md')) && !isIgnored(f))
-  .map(f => join(DOCS_DIR, f));
+function getAllDocs(dir) {
+  let results = [];
+
+  const list = readdirSync(dir, { withFileTypes: true });
+
+  for (const file of list) {
+    const fullPath = join(dir, file.name);
+
+    if (file.isDirectory()) {
+      results = results.concat(getAllDocs(fullPath));
+    } else if (
+      (file.name.endsWith('.md') || file.name.endsWith('.mdx')) &&
+      !isIgnored(fullPath.replace(DOCS_DIR, ''))
+    ) {
+      results.push(fullPath);
+    }
+  }
+
+  return results;
+}
+
+const docFiles = getAllDocs(DOCS_DIR);
 
 /** Strip fenced code blocks and inline code spans from content. */
 function stripCode(content) {
