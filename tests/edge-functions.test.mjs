@@ -44,7 +44,7 @@ const match = src.match(/\[(.*?)\]/s);
 
 assert.ok(match, 'Could not find domain array in file');
 
-const domains = eval(`[${match[1]}]`);
+const domains = JSON.parse(`[${match[1]}]`);
     assert.ok(Array.isArray(domains), 'Expected default export to be an array');
     assert.ok(domains.length > 200, `Expected 200+ domains, got ${domains.length}`);
     assert.ok(domains.includes('feeds.bbci.co.uk'), 'Expected BBC feed domain in list');
@@ -78,6 +78,7 @@ describe('Legacy api/*.js endpoint allowlist', () => {
     'health.js',
     'military-flights.js',
     'og-story.js',
+      'mock-events.js',
     'opensky.js',
     'oref-alerts.js',
     'polymarket.js',

@@ -15,7 +15,10 @@ import { join } from 'node:path';
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
-const DOCS_DIR = new URL('../docs/', import.meta.url).pathname;
+import { fileURLToPath } from 'node:url';
+
+const __dirname = fileURLToPath(new URL('.', import.meta.url));
+const DOCS_DIR = join(__dirname, '..', 'docs');
 
 // Parse .mintignore for excluded files/dirs
 const mintignorePath = join(DOCS_DIR, '.mintignore');

@@ -54,7 +54,7 @@ async function fetchSocrata(datasetId, extraParams = '') {
 async function fetchCotData() {
   const toNum = v => {
     const n = parseInt(String(v ?? '').replace(/,/g, '').trim(), 10);
-    return isNaN(n) ? 0 : n;
+    return Number.isNaN(n) ? 0 : n;
   };
 
   let financialRows, commodityRows;

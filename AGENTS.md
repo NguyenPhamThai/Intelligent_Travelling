@@ -60,6 +60,27 @@ npm run test:e2e         # Run all Playwright E2E tests
 make generate            # Regenerate proto stubs (requires buf + sebuf plugins)
 ```
 
+## Essential Commands for Agents
+
+Run these for common workflows before opening a PR or pushing:
+
+```bash
+make install             # One-time setup: tooling + deps (buf, sebuf plugins, npm deps)
+npm run typecheck:all    # Typecheck src + API projects
+npm run test:data        # Unit/integration tests
+npm run test:sidecar     # Sidecar + API handler tests
+npm run test:e2e         # Runtime + full + tech + finance E2E runs
+npm run lint:boundaries  # Enforce architectural dependency direction
+```
+
+Variant and visual checks when UI behavior changes:
+
+```bash
+npm run dev:tech
+npm run dev:finance
+npm run test:e2e:visual
+```
+
 ## Architecture Rules
 
 ### Dependency Direction
@@ -76,7 +97,7 @@ types -> config -> services -> components -> app -> App.ts
 
 ### API Layer Constraints
 
-- `api/*.js` are Vercel Edge Functions: **self-contained JS only**
+- `api/*.js` run in Vercel Edge Runtime and must stay self-contained JavaScript
 - They CANNOT import from `../src/` or `../server/` (different runtime)
 - Only same-directory `_*.js` helpers and npm packages
 - Enforced by `tests/edge-functions.test.mjs` and pre-push hook esbuild check
@@ -186,13 +207,19 @@ Runs automatically before `git push`:
 - Yahoo Finance requests must be staggered (150ms delays)
 - New data sources MUST have bootstrap hydration wired in `api/bootstrap.js`
 - Redis seed scripts MUST write `seed-meta:<key>` for health monitoring
+- Cache keys MUST include request-varying params to prevent cross-request leakage
+- Panel UI handlers should use event delegation on panel content containers because panel HTML is rebound
+- Bootstrap-hydrated data can be temporarily undefined; panels must render safely in that state
+- Variant detection is hostname-first, then local config; avoid mixing variants in one dev run
 
 ## External References
 
 - [Architecture (system reference)](ARCHITECTURE.md)
 - [Design Philosophy (why decisions were made)](docs/architecture.mdx)
 - [Contributing guide](CONTRIBUTING.md)
+- [Getting started guide](docs/getting-started.mdx)
 - [Data sources catalog](docs/data-sources.mdx)
 - [Health endpoints](docs/health-endpoints.mdx)
 - [Adding endpoints guide](docs/adding-endpoints.mdx)
+- [Build and generation targets](Makefile)
 - [API reference (OpenAPI)](docs/api/)

@@ -1128,7 +1128,7 @@ export class LiveNewsPanel extends Panel {
     this.isPlayerReady = true;
 
     // Always recreate if container was removed from DOM (e.g. showEmbedError replaced content).
-    if (!this.playerContainer || !this.playerContainer.parentElement) {
+    if (!this.playerContainer?.parentElement) {
       this.ensurePlayerContainer();
     }
 

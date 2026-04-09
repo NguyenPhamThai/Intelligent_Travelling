@@ -143,7 +143,7 @@ export class SupplyChainPanel extends Panel {
   }
 
   private renderChokepoints(): string {
-    if (!this.chokepointData || !this.chokepointData.chokepoints?.length) {
+    if (!this.chokepointData?.chokepoints?.length) {
       return `<div class="economic-empty">${t('components.supplyChain.noChokepoints')}</div>`;
     }
 
@@ -359,7 +359,7 @@ export class SupplyChainPanel extends Panel {
   }
 
   private renderMinerals(): string {
-    if (!this.mineralsData || !this.mineralsData.minerals?.length) {
+    if (!this.mineralsData?.minerals?.length) {
       return `<div class="economic-empty">${t('components.supplyChain.noMinerals')}</div>`;
     }
 

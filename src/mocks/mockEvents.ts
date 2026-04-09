@@ -30,8 +30,8 @@ export const MOCK_EVENTS: Event[] = [
 export function getMockEventsInRadius(lat: number, lon: number, radius: number): Event[] {
   return MOCK_EVENTS.filter(event => {
     const distance = Math.sqrt(
-      Math.pow(event.location.lat - lat, 2) +
-      Math.pow(event.location.lon - lon, 2)
+      (event.location.lat - lat) ** 2 +
+      (event.location.lon - lon) ** 2
     );
     return distance <= radius;
   });

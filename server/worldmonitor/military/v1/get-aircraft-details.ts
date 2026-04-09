@@ -30,7 +30,7 @@ export async function getAircraftDetails(
       async () => fetchWingbitsAircraftDetails(icao24, apiKey),
     );
 
-    if (!result || !result.details) {
+    if (!result?.details) {
       return { details: undefined, configured: true };
     }
 

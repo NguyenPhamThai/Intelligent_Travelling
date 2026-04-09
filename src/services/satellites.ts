@@ -99,7 +99,7 @@ export function propagatePositions(satRecs: SatRecEntry[], date?: Date): Satelli
   for (const { satrec, meta } of satRecs) {
     try {
       const pv = propagate(satrec, now);
-      if (!pv || !pv.position || typeof pv.position === 'boolean') continue;
+      if (!pv?.position || typeof pv.position === 'boolean') continue;
       const geo = eciToGeodetic(pv.position, gmst);
       const lat = degreesLat(geo.latitude);
       const lng = degreesLong(geo.longitude);
@@ -118,7 +118,7 @@ export function propagatePositions(satRecs: SatRecEntry[], date?: Date): Satelli
         const pastGmst = gstime(pastDate);
         try {
           const pastPv = propagate(satrec, pastDate);
-          if (!pastPv || !pastPv.position || typeof pastPv.position === 'boolean') continue;
+          if (!pastPv?.position || typeof pastPv.position === 'boolean') continue;
           const pastGeo = eciToGeodetic(pastPv.position, pastGmst);
           const tLat = degreesLat(pastGeo.latitude);
           const tLng = degreesLong(pastGeo.longitude);
