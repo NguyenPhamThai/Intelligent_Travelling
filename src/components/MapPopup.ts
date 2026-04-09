@@ -40,7 +40,7 @@ function fmtDelayMin(min: number | undefined): string {
   return `<span style="color:${min > 0 ? '#f97316' : '#22c55e'};font-size:10px;margin-left:3px">${min > 0 ? '+' : ''}${min}m</span>`;
 }
 
-export type PopupType = 'conflict' | 'hotspot' | 'earthquake' | 'weather' | 'base' | 'waterway' | 'apt' | 'cyberThreat' | 'nuclear' | 'economic' | 'irradiator' | 'pipeline' | 'cable' | 'cable-advisory' | 'repair-ship' | 'outage' | 'datacenter' | 'datacenterCluster' | 'ais' | 'protest' | 'protestCluster' | 'flight' | 'aircraft' | 'militaryFlight' | 'militaryVessel' | 'militaryFlightCluster' | 'militaryVesselCluster' | 'natEvent' | 'port' | 'spaceport' | 'mineral' | 'startupHub' | 'cloudRegion' | 'techHQ' | 'accelerator' | 'techEvent' | 'techHQCluster' | 'techEventCluster' | 'techActivity' | 'geoActivity' | 'stockExchange' | 'financialCenter' | 'centralBank' | 'commodityHub' | 'iranEvent' | 'gpsJamming' | 'radiation';
+export type PopupType = 'conflict' | 'hotspot' | 'earthquake' | 'weather' | 'base' | 'waterway' | 'apt' | 'cyberThreat' | 'nuclear' | 'economic' | 'irradiator' | 'pipeline' | 'cable' | 'cable-advisory' | 'repair-ship' | 'outage' | 'datacenter' | 'datacenterCluster' | 'ais' | 'protest' | 'protestCluster' | 'flight' | 'aircraft' | 'militaryFlight' | 'militaryVessel' | 'militaryFlightCluster' | 'militaryVesselCluster' | 'natEvent' | 'port' | 'spaceport' | 'mineral' | 'startupHub' | 'cloudRegion' | 'techHQ' | 'accelerator' | 'techEvent' | 'techHQCluster' | 'techEventCluster' | 'techActivity' | 'geoActivity' | 'stockExchange' | 'financialCenter' | 'centralBank' | 'commodityHub' | 'iranEvent' | 'gpsJamming' | 'radiation' | 'event';
 
 interface TechEventPopupData {
   id: string;
@@ -96,6 +96,16 @@ interface IranEventPopupData {
   timestamp: string | number;
   severity: string;
   relatedEvents?: IranEventPopupData[];
+}
+
+interface EventPopupData {
+  id: string;
+  title: string;
+  type: string;
+  location: { lat: number; lng?: number; lon?: number };
+  severity: number;
+  risk_score: number | null;
+  timestamp: number;
 }
 
 // Finance popup data types
@@ -514,6 +524,8 @@ export class MapPopup {
         return this.renderGpsJammingPopup(data.data as GpsJammingPopupData);
       case 'radiation':
         return this.renderRadiationPopup(data.data as RadiationObservation);
+      case 'event':
+        return this.renderEventPopup(data.data as EventPopupData);
       default:
         return '';
     }
@@ -567,6 +579,46 @@ export class MapPopup {
     `;
   }
 
+  private renderEventPopup(event: EventPopupData): string {
+    const riskClass = event.risk_score ? 
+      (event.risk_score >= 80 ? 'high' : event.risk_score >= 50 ? 'medium' : 'low') : 
+      'unknown';
+    const riskLabel = event.risk_score ? `${Math.round(event.risk_score)}%` : 'N/A';
+    const severityLabel = `Level ${event.severity}`;
+    const eventTime = new Date(event.timestamp).toLocaleString();
+    
+    return `
+      <div class="popup-header protest">
+        <span class="popup-title">${escapeHtml(event.title.toUpperCase())}</span>
+        <span class="popup-badge ${riskClass}">${escapeHtml(event.type.toUpperCase())}</span>
+        <button class="popup-close" aria-label="Close">×</button>
+      </div>
+      <div class="popup-body">
+        <div class="popup-stats">
+          <div class="popup-stat">
+            <span class="stat-label">Type</span>
+            <span class="stat-value">${escapeHtml(event.type)}</span>
+          </div>
+          <div class="popup-stat">
+            <span class="stat-label">Severity</span>
+            <span class="stat-value">${escapeHtml(severityLabel)}</span>
+          </div>
+          <div class="popup-stat">
+            <span class="stat-label">Risk Score</span>
+            <span class="stat-value" style="color:${riskClass === 'high' ? '#f97316' : riskClass === 'medium' ? '#eab308' : '#22c55e'}">${riskLabel}</span>
+          </div>
+          <div class="popup-stat">
+            <span class="stat-label">COORDINATES</span>
+            <span class="stat-value">${event.location.lat.toFixed(2)}°, ${(event.location.lng ?? event.location.lon ?? 0).toFixed(2)}°</span>
+          </div>
+          <div class="popup-stat">
+            <span class="stat-label">Time</span>
+            <span class="stat-value">${escapeHtml(eventTime)}</span>
+          </div>
+        </div>
+      </div>
+    `;
+  }
 
   private renderConflictPopup(conflict: ConflictZone): string {
     const severityClass = conflict.intensity === 'high' ? 'high' : conflict.intensity === 'medium' ? 'medium' : 'low';
