@@ -73,7 +73,7 @@ Railway notification-delivery service (new)
 | Sync scope | Explicit allowlist of safe keys only (see below) | Secrets in `mcp-store.ts` customHeaders and `runtime-config.ts` vault must never leave the device |
 | Convex table name | `userPreferences` (not `savedViews`) | Single canonical blob per userId+variant; `savedViews` implies multi-slot named views (Phase 2 extension) |
 | Prefs schema type | `v.any()` (not `v.string()`) | String blob bypasses all Convex validation; migration after data exists is non-trivial |
-| Alert delivery loop | Redis pub/sub subscription in `notification-relay` | 60s poll = 60s worst-case latency; pub/sub drops this to <2s. `atomicPublish()` already has the Redis connection |
+| Alert delivery loop | Redis pub/sub subscription in `notification-relay` | 60s poll = 60s worst-case latency; pub/sub drops this to &lt;2s. `atomicPublish()` already has the Redis connection |
 | Telegram pairing UX | Deep link with 15-minute time-limited token (base64url, 43 chars) | Best UX; base64url has 21 chars headroom vs hex at exactly Telegram's 64-char limit |
 | Pairing status detection | `useQuery` WebSocket subscription (not setTimeout poll) | Convex is push-based over WebSockets; polling is unnecessary and architecturally wrong |
 | Email address source | Cached in `notificationChannels` at link time (from `clerk.ts:130`) | Eliminates Clerk API fan-out in hot relay path; Clerk API rate limits would drop notifications |
@@ -486,7 +486,7 @@ For each variant the user has accessed:
 Rate limit display: "Max 5 alerts/hour per event type" (clarify: per-channel-send, not per-event)
 ```
 
- [ ] Telegram pairing completes end-to-end in < 60 seconds
+ [ ] Telegram pairing completes end-to-end in &lt; 60 seconds
 
 - [ ] `X-Telegram-Bot-Api-Secret-Token` verified with `timingSafeEqual()` on every webhook call
 - [ ] Group chat `/start` commands are rejected (chat.type !== 'private')
@@ -753,7 +753,7 @@ User signs in
 - [ ] notification-relay restarts cleanly from Railway SIGTERM without manual intervention
 - [ ] Telegram Bot token and encryption keys are never logged in plaintext
 - [ ] All Convex mutations extract `userId` from `ctx.auth.getUserIdentity().subject` — never from args
-- [ ] Notification latency from event publish to Telegram delivery: < 10 seconds (p99)
+- [ ] Notification latency from event publish to Telegram delivery: &lt; 10 seconds (p99)
 
 ### Quality Gates
 

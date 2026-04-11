@@ -25,7 +25,7 @@ Status:  · 🔄 Partial · ❌ Not started
 - **Impact:** 🔴 High | **Effort:** ~4 hours
 - **Status:**  — `src/services/i18n.ts` uses per-language dynamic `import()` via `LOCALE_LOADERS`. Only `en.json` is bundled eagerly; all other locales are lazy-loaded on demand.
 - All 13 locale JSON files are bundled, but the user only needs 1 at a time.
-- Dynamically `import(`@/locales/${lang}.json`)` only the active language. Pre-load the fallback (`en.json`) and lazy-load the rest.
+- Dynamically `import('@/locales/${lang}.json')` only the active language. Pre-load the fallback (`en.json`) and lazy-load the rest.
 - **Expected gain:** Save ~500 KB from initial bundle.
 
 ### PERF-003 — Defer Non-Critical API Calls
@@ -41,7 +41,7 @@ Status:  · 🔄 Partial · ❌ Not started
 - **Impact:** 🟡 Medium | **Effort:** ~4 hours
 - **Status:**  — `index.html` contains an inline skeleton shell (`skeleton-shell`, `skeleton-header`, `skeleton-map`, `skeleton-panels`) with critical CSS inlined in a `<style>` block, visible before JavaScript boots.
 - The page is blank until JavaScript boots. Inline a minimal CSS + HTML skeleton in `index.html` (dark background, header bar, map placeholder, sidebar placeholder).
-- **Expected gain:** Perceived load time drops to <0.5s.
+- **Expected gain:** Perceived load time drops to &lt;0.5s.
 
 ### PERF-005 — Enable Vite Chunk Splitting Strategy
 
@@ -243,7 +243,7 @@ Status:  · 🔄 Partial · ❌ Not started
 - **Impact:** 🔴 High | **Effort:** ~1 day
 - **Status:**  — `src/components/DeckGLMap.ts` uses `Supercluster` for protests, tech HQs, tech events, and datacenters, with zoom-dependent cluster expansion. Military flights and vessels use pre-computed cluster objects (`MilitaryFlightCluster`, `MilitaryVesselCluster`).
 - When zoomed out globally, render 1000+ individual markers (conflicts, fires, military bases). This kills GPU performance.
-- Implement server-side or client-side clustering at zoom levels <8. Show counts, expand on zoom.
+- Implement server-side or client-side clustering at zoom levels &lt;8. Show counts, expand on zoom.
 - **Expected gain:** 10× fewer draw calls at global zoom.
 
 ### PERF-028 — Offscreen Map Layer Culling
@@ -272,9 +272,9 @@ Status:  · 🔄 Partial · ❌ Not started
 ### PERF-031 — Simplify Country Geometry at Low Zoom
 
 - **Impact:** 🟡 Medium | **Effort:** ~4 hours
-- **Status:**  — `src/utils/geo-simplify.ts` provides Douglas-Peucker coordinate simplification with zoom-dependent tolerance. At zoom <5, uses 0.01° tolerance for ~80% vertex reduction.
+- **Status:**  — `src/utils/geo-simplify.ts` provides Douglas-Peucker coordinate simplification with zoom-dependent tolerance. At zoom &lt;5, uses 0.01° tolerance for ~80% vertex reduction.
 - Country boundary GeoJSON is high-resolution for close zoom. At global zoom, use simplified geometries (Douglas-Peucker 0.01° tolerance).
-- **Expected gain:** 80% fewer vertices at zoom <5.
+- **Expected gain:** 80% fewer vertices at zoom &lt;5.
 
 ---
 
@@ -399,7 +399,7 @@ Status:  · 🔄 Partial · ❌ Not started
 - **Impact:** 🟡 Medium | **Effort:** ~2 hours
 - **Status:**  — All Vercel serverless API handlers set `Cache-Control: public, max-age=N, s-maxage=N, stale-while-revalidate=M` headers. Examples: `hackernews.js` (5 min), `yahoo-finance.js` (60 s), `acled-conflict.js` (5 min), `coingecko.js` (2 min), `country-intel.js` (1 hr).
 - Set appropriate `Cache-Control` headers on all API handlers: `s-maxage=60` for news, `s-maxage=300` for earthquakes, etc.
-- Cloudflare will cache at the edge, serving responses in <10ms globally.
+- Cloudflare will cache at the edge, serving responses in &lt;10ms globally.
 - **Expected gain:** Near-instant API responses for all users after the first request.
 
 ### PERF-049 — Preconnect to External Domains
