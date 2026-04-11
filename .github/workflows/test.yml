@@ -26,7 +26,7 @@ jobs:
         run: npm ci
 
       - name: Run tests (tap)
-        run: npm run test:data -- --test-reporter=tap --test-reporter-destination=stdout 
+        run: node --test --test-reporter=tap --test-reporter-destination=stdout tests/*.test.mjs tests/*.test.mts 
 
       - name: Edge function bundle check
         run: |
