@@ -18,7 +18,9 @@ jobs:
           node-version: '22'
           cache: 'npm'
       - run: npm ci
-      - run: npm run test:data
+      - name: Run tests (verbose)
+  run: |
+    npm run test:data -- --reporter=tap
       - name: Edge function bundle check
         run: |
           find api/ -name "*.js" -not -name "_*" | while read f; do
