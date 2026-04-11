@@ -19,20 +19,20 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: '20'   # đổi 20 cho ổn định
+          node-version: '20'
           cache: 'npm'
 
       - name: Install dependencies
         run: npm ci
 
       - name: Run tests (tap)
-        run: node --test --test-reporter=tap --test-reporter-destination=stdout tests/*.test.mjs tests/*.test.mts 
+        run: npm run test:data -- --test-reporter=tap --test-reporter-destination=stdout
 
       - name: Edge function bundle check
         run: |
           find api/ -name "*.js" -not -name "_*" | while read f; do
             npx esbuild "$f" --bundle --format=esm --platform=browser --outfile=/dev/null || {
               echo "ERROR: esbuild failed to bundle $f"
-              exit 1  
+              exit 1
             }
           done
