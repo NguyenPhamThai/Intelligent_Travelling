@@ -11,21 +11,28 @@ permissions:
 jobs:
   unit:
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: 'npm'
-      - run: npm ci
-      - name: Run tests (verbose)
-  run: npm run test:data -- --reporter=tap
 
-- name: Edge function bundle check
-  run: |
-    find api/ -name "*.js" -not -name "_*" | while read f; do
-      npx esbuild "$f" --bundle --format=esm --platform=browser --outfile=/dev/null || {
-        echo "ERROR: esbuild failed to bundle $f"
-        exit 1
-      }
-    done
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'   # đổi 20 cho ổn định
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests (verbose)
+        run: npm run test:data -- --reporter=tap
+
+      - name: Edge function bundle check
+        run: |
+          find api/ -name "*.js" -not -name "_*" | while read f; do
+            npx esbuild "$f" --bundle --format=esm --platform=browser --outfile=/dev/null || {
+              echo "ERROR: esbuild failed to bundle $f"
+              exit 1
+            }
+          done
