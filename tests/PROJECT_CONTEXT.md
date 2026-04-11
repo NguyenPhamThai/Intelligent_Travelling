@@ -1,4 +1,5 @@
 ## Mô tả project: 
+
 -Bạn là một Software Architect + AI Engineer có kinh nghiệm thiết kế hệ thống realtime, data pipeline và recommendation system.
 
 Tôi đang xây dựng một đồ án tên là:
@@ -100,6 +101,7 @@ Gợi ý hành động
 Chatbot response
 
 ## Kiến trúc
+
 1. Thiết Kế Lại Kiến Trúc Hệ Thống Hoàn Chỉnh
 Dựa trên base của WorldMonitor (một SPA dashboard realtime với panels, API endpoints, và data loaders), tôi đề xuất mở rộng thành kiến trúc microservices-like với các module mới cho SAFETY. Kiến trúc này giữ nguyên cấu trúc cũ của WorldMonitor (frontend panels, backend APIs) và thêm các components mới mà không phá vỡ dependency direction (types → config → services → components → app).
 
@@ -112,6 +114,7 @@ AI/ML Components: Tích hợp NLP cho chatbot, ML cho risk prediction, và perso
 Kiến trúc này đảm bảo realtime (WebSockets hoặc polling qua data loaders), scalable (Edge Functions), và modular.
 
 ## Tiến độ hiện tại
+
 Thu thập và tích hợp dữ liệu từ nhiều nguồn (Data Ingestion & Aggregation):
 
 Vấn đề: Thu thập dữ liệu thời gian thực từ 30+ nguồn bên ngoài (địa chính trị, quân sự, tài chính, khí hậu, cyber, hàng hải, hàng không, v.v.), xử lý RSS feeds, API calls, và dữ liệu vệ tinh.
