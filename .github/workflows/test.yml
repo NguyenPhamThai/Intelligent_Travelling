@@ -25,9 +25,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run tests (tap)
-        run: npm run test:data -- --test-reporter=tap --test-reporter-destination=stdout
-
+      - name: Run tests 
+        run: npm run test:data 
       - name: Edge function bundle check
         run: |
           find api/ -name "*.js" -not -name "_*" | while read f; do
