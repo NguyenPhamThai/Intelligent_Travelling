@@ -13,6 +13,16 @@ export const UI_STATE_MAP = Object.freeze({
   success: 'success',
 });
 
+export const EVENT_CONTRACT = Object.freeze({
+  required: Object.freeze({
+    id: 'string',
+    location: Object.freeze({ lat: 'number', lon: 'number' }),
+    type: 'riot|crime|weather',
+    severity: 'number',
+    timestamp: 'number',
+  }),
+});
+
 const TYPE_WEIGHTS = Object.freeze({
   riot: 1,
   crime: 0.8,
@@ -26,7 +36,10 @@ export const RISK_SCORE_SPEC = Object.freeze({
   thresholds: RISK_SCORE_THRESHOLDS,
   uiStates: UI_STATE_MAP,
   apiContract: {
-    input: 'full Event',
+    input: {
+      type: 'full Event',
+      required: EVENT_CONTRACT.required,
+    },
     output: {
       risk_score: 'number',
       source: 'string',
@@ -34,7 +47,37 @@ export const RISK_SCORE_SPEC = Object.freeze({
       threshold: 'green|yellow|red',
     },
   },
+  examples: {
+    request: {
+      id: 'evt_20260412_001',
+      location: { lat: 10.7769, lon: 106.7009 },
+      type: 'riot',
+      severity: 0.72,
+      timestamp: 1775952000000,
+    },
+    response: {
+      risk_score: 72,
+      source: 'heuristic_v0',
+      fallback_used: false,
+      threshold: 'red',
+    },
+  },
 });
+
+export function isFullEvent(event) {
+  return (
+    !!event &&
+    typeof event === 'object' &&
+    typeof event.id === 'string' &&
+    typeof event.location === 'object' &&
+    typeof event.location?.lat === 'number' &&
+    typeof event.location?.lon === 'number' &&
+    typeof event.type === 'string' &&
+    ['riot', 'crime', 'weather'].includes(event.type) &&
+    typeof event.severity === 'number' &&
+    typeof event.timestamp === 'number'
+  );
+}
 
 export function clampRiskScore(score) {
   return Math.min(Math.max(score, RISK_SCORE_MIN), RISK_SCORE_MAX);

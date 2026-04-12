@@ -1,4 +1,4 @@
-import { calculateRiskScore, getThreshold } from '../../shared/risk-score-spec.js';
+import { calculateRiskScore, getThreshold, isFullEvent } from '../../shared/risk-score-spec.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -8,6 +8,14 @@ export default async function handler(req, res) {
 
   try {
     const event = req.body && typeof req.body === 'object' ? req.body : {};
+    if (!isFullEvent(event)) {
+      res.status(400).json({
+        error: 'Invalid Event payload',
+        expected: 'full Event',
+      });
+      return;
+    }
+
     const risk_score = calculateRiskScore(event);
 
     res.status(200).json({
