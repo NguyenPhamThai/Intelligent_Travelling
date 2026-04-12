@@ -1,0 +1,29 @@
+[
+  {
+    "id": "riot_001",
+    "location": { "lat": 21.0285, "lon": 105.8542 },
+    "type": "riot",
+    "severity": 0.9,
+    "risk_score": 85,
+    "description": "Biểu tình lớn tại khu vực trung tâm thành phố.",
+    "timestamp": 1712918400
+  },
+  {
+    "id": "flood_002",
+    "location": { "lat": 16.4637, "lon": 107.5908 },
+    "type": "weather",
+    "severity": 0.7,
+    "risk_score": 60,
+    "description": "Cảnh báo ngập lụt diện rộng do mưa lớn kéo dài.",
+    "timestamp": 1712919500
+  },
+  {
+    "id": "crime_003",
+    "location": { "lat": 10.7769, "lon": 106.7009 },
+    "type": "crime",
+    "severity": 0.5,
+    "risk_score": 45,
+    "description": "Ghi nhận nhiều vụ trộm cắp tài sản khách du lịch.",
+    "timestamp": 1712920800
+  }
+]
