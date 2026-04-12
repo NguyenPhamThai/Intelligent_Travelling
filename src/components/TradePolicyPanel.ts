@@ -160,7 +160,7 @@ export class TradePolicyPanel extends Panel {
   }
 
   private renderRestrictions(): string {
-    if (!this.restrictionsData || !this.restrictionsData.restrictions?.length) {
+    if (!this.restrictionsData?.restrictions?.length) {
       return `<div class="economic-empty">${t('components.tradePolicy.noOverviewData')}</div>`;
     }
 
@@ -209,7 +209,7 @@ export class TradePolicyPanel extends Panel {
   }
 
   private renderTariffs(): string {
-    if (!this.tariffsData || !this.tariffsData.datapoints?.length) {
+    if (!this.tariffsData?.datapoints?.length) {
       return `<div class="economic-empty">${t('components.tradePolicy.noTariffData')}</div>`;
     }
 
@@ -321,7 +321,7 @@ export class TradePolicyPanel extends Panel {
   }
 
   private renderFlows(): string {
-    if (!this.flowsData || !this.flowsData.flows?.length) {
+    if (!this.flowsData?.flows?.length) {
       return `<div class="economic-empty">${t('components.tradePolicy.noFlowData')}</div>`;
     }
 
@@ -351,7 +351,7 @@ export class TradePolicyPanel extends Panel {
   }
 
   private renderBarriers(): string {
-    if (!this.barriersData || !this.barriersData.barriers?.length) {
+    if (!this.barriersData?.barriers?.length) {
       return `<div class="economic-empty">${t('components.tradePolicy.noBarriers')}</div>`;
     }
 
@@ -378,7 +378,7 @@ export class TradePolicyPanel extends Panel {
   }
 
   private renderRevenue(): string {
-    if (!this.revenueData || !this.revenueData.months?.length) {
+    if (!this.revenueData?.months?.length) {
       return `<div class="economic-empty">${t('components.tradePolicy.noRevenueData')}</div>`;
     }
 

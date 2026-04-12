@@ -126,7 +126,7 @@ function polymarketPlugin(): Plugin {
         const order = ALLOWED_ORDER.includes(url.searchParams.get('order') ?? '') ? url.searchParams.get('order') : 'volume';
         const ascending = ['true', 'false'].includes(url.searchParams.get('ascending') ?? '') ? url.searchParams.get('ascending') : 'false';
         const rawLimit = parseInt(url.searchParams.get('limit') ?? '', 10);
-        const limit = isNaN(rawLimit) ? 50 : Math.max(1, Math.min(100, rawLimit));
+        const limit = Number.isNaN(rawLimit) ? 50 : Math.max(1, Math.min(100, rawLimit));
 
         const params = new URLSearchParams({ closed: closed!, order: order!, ascending: ascending!, limit: String(limit) });
         if (endpoint === 'events') {
@@ -151,6 +151,127 @@ function polymarketPlugin(): Plugin {
           // Expected: Cloudflare JA3 blocks server-side TLS — return empty array
           res.setHeader('Cache-Control', 'public, max-age=300');
           res.end('[]');
+        }
+      });
+    },
+  };
+}
+
+function eventsPlugin(): Plugin {
+  return {
+    name: 'events-api-dev',
+    configureServer(server) {
+      server.middlewares.use(async (req, res, next) => {
+        if (!req.url?.startsWith('/api/events')) return next();
+
+        const url = new URL(req.url, 'http://localhost');
+        const lat = url.searchParams.get('lat');
+        const lon = url.searchParams.get('lon');
+        const radius = url.searchParams.get('radius') || '50';
+
+        res.setHeader('Content-Type', 'application/json');
+        res.setHeader('Access-Control-Allow-Origin', '*');
+
+        // Calculate haversine distance
+        function toNumber(value: string | null) {
+          const parsed = Number(value);
+          return Number.isFinite(parsed) ? parsed : NaN;
+        }
+
+        function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
+          const toRad = (degrees: number) => (degrees * Math.PI) / 180;
+          const dLat = toRad(lat2 - lat1);
+          const dLon = toRad(lon2 - lon1);
+          const a =
+            Math.sin(dLat / 2) ** 2 +
+            Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+          const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+          const earthRadiusKm = 6371;
+          return earthRadiusKm * c;
+        }
+
+        // Mock events
+        const MOCK_EVENTS = [
+          {
+            id: 'evt-001-hanoi-riot',
+            title: 'Hanoi Riot Alert',
+            location: { lat: 21.0285, lon: 105.8542 },
+            type: 'riot',
+            severity: 8,
+            timestamp: Date.now(),
+          },
+          {
+            id: 'evt-002-hcmc-crime',
+            title: 'HCMC Crime Surge',
+            location: { lat: 10.8231, lon: 106.6297 },
+            type: 'crime',
+            severity: 6,
+            timestamp: Date.now() - 600000,
+          },
+          {
+            id: 'evt-003-da-nang-weather',
+            title: 'Da Nang Weather Alert',
+            location: { lat: 16.0544, lon: 108.2022 },
+            type: 'weather',
+            severity: 7,
+            timestamp: Date.now() - 1200000,
+          },
+          {
+            id: 'evt-004-hue-riot',
+            title: 'Hue Protest',
+            location: { lat: 16.4637, lon: 107.5909 },
+            type: 'riot',
+            severity: 5,
+            timestamp: Date.now() - 3600000,
+          },
+          {
+            id: 'evt-005-nha-trang-crime',
+            title: 'Nha Trang Incident',
+            location: { lat: 12.2388, lon: 109.1967 },
+            type: 'crime',
+            severity: 4,
+            timestamp: Date.now() - 7200000,
+          },
+        ];
+
+        try {
+          const latNum = toNumber(lat);
+          const lonNum = toNumber(lon);
+          const radiusNum = toNumber(radius);
+
+          if (Number.isNaN(latNum) || Number.isNaN(lonNum)) {
+            res.statusCode = 400;
+            res.end(JSON.stringify({ error: 'Missing or invalid lat/lon parameters' }));
+            return;
+          }
+
+          const radiusKm = Number.isNaN(radiusNum) ? 50 : radiusNum;
+
+          // Filter events by radius
+          const events = MOCK_EVENTS
+            .map((event) => ({
+              event,
+              distance: haversineDistance(latNum, lonNum, event.location.lat, event.location.lon),
+            }))
+            .filter((entry) => entry.distance <= radiusKm)
+            .sort((a, b) => a.distance - b.distance)
+            .map((entry) => ({
+              ...entry.event,
+              risk_score: typeof entry.event.severity === 'number' ? entry.event.severity * 20 : null,
+            }));
+
+          res.setHeader('Cache-Control', 'no-cache');
+          res.end(
+            JSON.stringify({
+              events,
+              total: events.length,
+              query: { lat: latNum, lon: lonNum, radius_km: radiusKm },
+              timestamp: Date.now(),
+            })
+          );
+        } catch (error) {
+          res.statusCode = 500;
+          res.end(JSON.stringify({ error: `Server error: ${error instanceof Error ? error.message : String(error)}` }));
         }
       });
     },
@@ -616,6 +737,7 @@ export default defineConfig(({ mode }) => {
     plugins: [
       htmlVariantPlugin(activeMeta, activeVariant, isDesktopBuild),
       polymarketPlugin(),
+      eventsPlugin(),
       rssProxyPlugin(),
       youtubeLivePlugin(),
       gpsjamDevPlugin(),

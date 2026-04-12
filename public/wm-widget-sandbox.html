@@ -3,9 +3,9 @@
 <head><meta charset="utf-8"></head>
 <body>
 <script>
-(function () {
+((() => {
   var handled = false;
-  window.addEventListener('message', function (e) {
+  window.addEventListener('message', (e) => {
     if (handled) return;
     if (!e.data || e.data.type !== 'wm-html') return;
     var origin = e.origin || '';
@@ -15,7 +15,7 @@
     document.write(e.data.html);
     document.close();
   });
-}());
+})());
 </script>
 </body>
 </html>

@@ -520,7 +520,7 @@ Add scheduled export and a public API endpoint for integration with external too
 ### TODO-035 — Panel Data Age Indicator
 
 - **Priority:** 🟡 Medium | **Effort:** ~4 hours
-- Show a colored dot on each panel header: green = <1 min stale, yellow = 1–5 min, red = >5 min. Help users know which data is fresh.
+- Show a colored dot on each panel header: green = &lt;1 min stale, yellow = 1–5 min, red = >5 min. Help users know which data is fresh.
 
 ### TODO-036 — Contextual Right-Click Menu on Panels
 

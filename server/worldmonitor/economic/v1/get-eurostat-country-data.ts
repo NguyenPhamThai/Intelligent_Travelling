@@ -27,7 +27,7 @@ export async function getEurostatCountryData(
 ): Promise<GetEurostatCountryDataResponse> {
   try {
     const raw = await getCachedJson(SEED_CACHE_KEY, true) as Record<string, unknown> | null;
-    if (!raw || !raw.countries || Object.keys(raw.countries as object).length === 0) {
+    if (!raw?.countries || Object.keys(raw.countries as object).length === 0) {
       return buildFallbackResult();
     }
     return {

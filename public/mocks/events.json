@@ -1,0 +1,11 @@
+[
+  {
+    "id": "1",
+    "title": "Mock Event",
+    "type": "fire",
+    "location": { "lat": 40.7128, "lng": -74.006 },
+    "severity": 3,
+    "risk_score": null,
+    "timestamp": 1712600000000
+  }
+]

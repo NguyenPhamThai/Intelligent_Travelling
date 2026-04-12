@@ -223,7 +223,7 @@ Implement Clerk auth flow for the Tauri desktop app with proper session persiste
 1. Register `worldmonitor://auth/callback` deep link URI scheme in Tauri config
 2. Use PKCE OAuth flow (Clerk supports this)
 3. On successful callback, store Clerk session token in macOS Keychain via existing `setSecret()` pattern
-4. Token lifecycle: refresh on app foreground, auto-refresh if <5min remaining
+4. Token lifecycle: refresh on app foreground, auto-refresh if &lt;5min remaining
 5. Logout: clear keychain entry + `clerk.signOut()` + invalidate cached entitlements
 6. Fallback: if deep link fails, show one-time code flow (email-based)
 
@@ -993,7 +993,7 @@ Build a scheduled AI briefing system that synthesizes overnight developments and
 **Priority**: P1 | **Size**: L | **Dependencies**: #4.1
 
 **Description**:
-Reduce data refresh interval for pro users from 5-15 minutes to <60 seconds.
+Reduce data refresh interval for pro users from 5-15 minutes to &lt;60 seconds.
 
 **Phased approach**:
 
@@ -1002,7 +1002,7 @@ Reduce data refresh interval for pro users from 5-15 minutes to <60 seconds.
 
 **Acceptance criteria**:
 
-- [ ] Pro users see data refresh <60s
+- [ ] Pro users see data refresh &lt;60s
 - [ ] Free users unchanged (5-15 min)
 - [ ] Server load monitored (10x more requests from pro)
 

@@ -18,45 +18,50 @@
 import { getCorsHeaders } from './_cors.js';
 import { jsonResponse } from './_json-response.js';
 
+// Calculate risk_score from severity: severity * 20
+function calculateRiskScore(severity) {
+  return typeof severity === 'number' ? severity * 20 : null;
+}
+
 const MOCK_EVENTS = [
   {
     id: 'evt-001-hanoi-riot',
+    title: 'Hanoi Riot Alert',
     location: { lat: 21.0285, lon: 105.8542 },
     type: 'riot',
     severity: 8,
-    risk_score: 88,
     timestamp: Date.now(),
   },
   {
     id: 'evt-002-hcmc-crime',
+    title: 'HCMC Crime Surge',
     location: { lat: 10.8231, lon: 106.6297 },
     type: 'crime',
     severity: 6,
-    risk_score: 66,
     timestamp: Date.now() - 600000,
   },
   {
     id: 'evt-003-da-nang-weather',
+    title: 'Da Nang Weather Alert',
     location: { lat: 16.0544, lon: 108.2022 },
     type: 'weather',
     severity: 7,
-    risk_score: 73,
     timestamp: Date.now() - 1200000,
   },
   {
     id: 'evt-004-hue-riot',
+    title: 'Hue Protest',
     location: { lat: 16.4637, lon: 107.5909 },
     type: 'riot',
     severity: 5,
-    risk_score: 52,
     timestamp: Date.now() - 3600000,
   },
   {
     id: 'evt-005-nha-trang-crime',
+    title: 'Nha Trang Incident',
     location: { lat: 12.2388, lon: 109.1967 },
     type: 'crime',
     severity: 4,
-    risk_score: 41,
     timestamp: Date.now() - 7200000,
   },
 ];
@@ -85,7 +90,10 @@ function getEventsInRadius(lat, lon, radiusKm) {
   }))
     .filter((entry) => entry.distance <= radiusKm)
     .sort((a, b) => a.distance - b.distance)
-    .map((entry) => entry.event);
+    .map((entry) => ({
+      ...entry.event,
+      risk_score: calculateRiskScore(entry.event.severity),
+    }));
 }
 
 function validateCoordinates(lat, lon) {

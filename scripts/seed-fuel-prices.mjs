@@ -159,8 +159,8 @@ async function fetchMexico() {
     const maxDate = dates.sort().reverse()[0];
     const latest = results.filter(r => r.fecha_aplicacion === maxDate);
 
-    const regularPrices = latest.map(r => parseFloat(r.precio_gasolina_regular)).filter(v => !isNaN(v) && v > 0);
-    const dieselPrices = latest.map(r => parseFloat(r.precio_diesel)).filter(v => !isNaN(v) && v > 0);
+    const regularPrices = latest.map(r => parseFloat(r.precio_gasolina_regular)).filter(v => !Number.isNaN(v) && v > 0);
+    const dieselPrices = latest.map(r => parseFloat(r.precio_diesel)).filter(v => !Number.isNaN(v) && v > 0);
 
     const avgRegular = regularPrices.length > 0
       ? +(regularPrices.reduce((a, b) => a + b, 0) / regularPrices.length).toFixed(4)
@@ -628,7 +628,7 @@ if (hasPrevData && prevTooRecent) {
   console.warn(`  [WoW] Skipping WoW — previous snapshot is only ${Math.round(prevAge / 3600000)}h old (need 144h+)`);
 }
 
-let wowAvailable = hasPrevData && !prevTooRecent;
+const wowAvailable = hasPrevData && !prevTooRecent;
 
 if (wowAvailable) {
   const prevMap = new Map(prevSnapshot.countries.map(c => [c.code, c]));

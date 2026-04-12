@@ -268,7 +268,7 @@ export class EconomicPanel extends Panel {
   }
 
   private renderSpending(): string {
-    if (!this.spendingData || !this.spendingData.awards?.length) {
+    if (!this.spendingData?.awards?.length) {
       return `<div class="economic-empty">${t('components.economic.noSpending')}</div>`;
     }
 
@@ -298,7 +298,7 @@ export class EconomicPanel extends Panel {
   }
 
   private renderCentralBanks(): string {
-    if (!this.bisData || !this.bisData.policyRates?.length) {
+    if (!this.bisData?.policyRates?.length) {
       return `<div class="economic-empty">${t('components.economic.noBisData')}</div>`;
     }
 

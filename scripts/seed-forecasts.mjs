@@ -3871,7 +3871,7 @@ async function extractImpactExpansionBundle({
 
   bundle.source = 'live';
   bundle.parseMode = 'per_candidate';
-  let extractedCandidates = [];
+  const extractedCandidates = [];
   for (let i = 0; i < perCandidateResults.length; i++) {
     const r = perCandidateResults[i];
     const packet = selectedCandidatePackets[i];

@@ -562,7 +562,7 @@ export class App {
 
     // Desktop key management panel must always remain accessible in Tauri.
     if (isDesktopApp) {
-      if (!panelSettings['runtime-config'] || !panelSettings['runtime-config'].enabled) {
+      if (!panelSettings['runtime-config']?.enabled) {
         panelSettings['runtime-config'] = {
           ...panelSettings['runtime-config'],
           name: panelSettings['runtime-config']?.name ?? 'Desktop Configuration',

@@ -295,7 +295,7 @@ export class ConsumerPricesPanel extends Panel {
     }
     const rows = SINGLE_MARKETS.map((m) => {
       const d = this.allMarkets.find((r) => r.marketCode === m.code);
-      const hasData = d && d.asOf && d.asOf !== '0' && !d.upstreamUnavailable;
+      const hasData = !!(d?.asOf && d.asOf !== '0' && !d.upstreamUnavailable);
       if (!hasData) {
         return `
           <tr class="cp-global-row" data-market="${m.code}">
@@ -329,7 +329,7 @@ export class ConsumerPricesPanel extends Panel {
 
   private renderOverview(): string {
     const d = this.overview;
-    if (!d || !d.asOf || d.asOf === '0') return this.renderEmptyState('No price data available yet');
+    if (!d?.asOf || d.asOf === '0') return this.renderEmptyState('No price data available yet');
 
     return `
       <div class="cp-overview-grid">
