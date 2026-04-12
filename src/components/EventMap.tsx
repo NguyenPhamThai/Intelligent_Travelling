@@ -1,20 +1,13 @@
-// Mapping trạng thái hiển thị [Yêu cầu trong ảnh]
-export enum UIState {
-  LOADING = 'loading',
-  ERROR = 'error',
-  SUCCESS = 'success'
-}
+import { UI_STATE_MAP, getThreshold } from '../../shared/risk-score-spec.js';
+
+export const UIStateMap = UI_STATE_MAP;
 
 export const EventMarker = ({ event }: { event: any }) => {
-  // Xác định màu sắc dựa trên ngưỡng đã chốt [cite: 188]
-  const getColor = (score: number) => {
-    if (score < 30) return 'green';
-    if (score <= 70) return 'orange'; // yellow
-    return 'red';
-  };
+  const threshold = getThreshold(Number(event?.risk_score ?? 0));
+  const color = threshold === 'green' ? 'green' : threshold === 'yellow' ? 'orange' : 'red';
 
   return (
-    <div style={{ color: getColor(event.risk_score) }}>
+    <div style={{ color }}>
       📍 {event.type.toUpperCase()} ({event.risk_score})
     </div>
   );
