@@ -1,11 +1,11 @@
 // Mapping trạng thái hiển thị [Yêu cầu trong ảnh]
-enum UIState {
+export enum UIState {
   LOADING = 'loading',
   ERROR = 'error',
   SUCCESS = 'success'
 }
 
-const EventMarker = ({ event }: { event: any }) => {
+export const EventMarker = ({ event }: { event: any }) => {
   // Xác định màu sắc dựa trên ngưỡng đã chốt [cite: 188]
   const getColor = (score: number) => {
     if (score < 30) return 'green';
