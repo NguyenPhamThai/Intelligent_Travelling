@@ -1,11 +1,12 @@
-export const RISK_SCORE_MIN = 0;
-export const RISK_SCORE_MAX = 100;
-
-export const RISK_SCORE_THRESHOLDS = Object.freeze({
-  green: 30,
-  yellow: 70,
-  red: 100,
-});
+import {
+  calculateRiskScore,
+  clampRiskScore,
+  getRiskLevel,
+  RISK_SCORE_MAX,
+  RISK_SCORE_MIN,
+  RISK_SCORE_THRESHOLDS,
+  sanitizeRiskScore,
+} from './risk-score.js';
 
 export const UI_STATE_MAP = Object.freeze({
   loading: 'loading',
@@ -79,18 +80,23 @@ export function isFullEvent(event) {
   );
 }
 
-export function clampRiskScore(score) {
-  return Math.min(Math.max(score, RISK_SCORE_MIN), RISK_SCORE_MAX);
+export function hasRequiredScoreFields(event) {
+  return (
+    !!event &&
+    typeof event === 'object' &&
+    typeof event.type === 'string' &&
+    ['riot', 'crime', 'weather'].includes(event.type) &&
+    typeof event.severity === 'number' &&
+    Number.isFinite(event.severity) &&
+    typeof event.location === 'object' &&
+    Number.isFinite(event.location?.lat) &&
+    Number.isFinite(event.location?.lon) &&
+    typeof event.timestamp === 'number' &&
+    Number.isFinite(event.timestamp)
+  );
 }
 
-export function calculateRiskScore(event) {
-  const severity = Number(event?.severity ?? 0);
-  const typeWeight = TYPE_WEIGHTS[event?.type] ?? 0.5;
-  return clampRiskScore(severity * typeWeight * 100);
-}
+export { calculateRiskScore, clampRiskScore, getRiskLevel, sanitizeRiskScore };
 
-export function getThreshold(score) {
-  if (score < RISK_SCORE_THRESHOLDS.green) return 'green';
-  if (score <= RISK_SCORE_THRESHOLDS.yellow) return 'yellow';
-  return 'red';
-}
+// Backward-compatible alias for older callers.
+export const getThreshold = getRiskLevel;

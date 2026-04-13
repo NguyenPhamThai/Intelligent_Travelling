@@ -5,6 +5,7 @@ import { mkdir, readFile, writeFile } from 'fs/promises';
 import { brotliCompress } from 'zlib';
 import { promisify } from 'util';
 import pkg from './package.json';
+import { calculateRiskScore, getRiskLevel } from './shared/risk-score.js';
 import { VARIANT_META, type VariantMeta } from './src/config/variant-meta';
 
 // Env-dependent constants moved inside defineConfig function
@@ -255,10 +256,16 @@ function eventsPlugin(): Plugin {
             }))
             .filter((entry) => entry.distance <= radiusKm)
             .sort((a, b) => a.distance - b.distance)
-            .map((entry) => ({
-              ...entry.event,
-              risk_score: typeof entry.event.severity === 'number' ? entry.event.severity * 20 : null,
-            }));
+            .map((entry) => {
+              const riskScore = calculateRiskScore(entry.event);
+              return {
+                ...entry.event,
+                risk_score: riskScore,
+                source: 'shared_scorer',
+                fallback_used: false,
+                threshold: getRiskLevel(riskScore),
+              };
+            });
 
           res.setHeader('Cache-Control', 'no-cache');
           res.end(

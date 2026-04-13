@@ -3,7 +3,7 @@ import { Event } from './types';
 
 export function filterDistance(events: Event[], userLat: number, userLng: number, radiusKm: number): Event[] {
   return events.filter(event => {
-    const distance = getDistance(userLat, userLng, event.location.lat, event.location.lng);
+    const distance = getDistance(userLat, userLng, event.location.lat, event.location.lon);
     return distance <= radiusKm;
   });
 }
@@ -19,15 +19,15 @@ export function classify(event: Event): Event {
 }
 
 export function calculateRisk(event: Event, userLat: number, userLng: number): Event {
-  const distance = getDistance(userLat, userLng, event.location.lat, event.location.lng);
+  const distance = getDistance(userLat, userLng, event.location.lat, event.location.lon);
   const recencyHours = (Date.now() - event.timestamp) / (1000 * 60 * 60);
-  const typeWeight = { weather: 1, crime: 2, riot: 3, disaster: 4 }[event.type] || 1;
+  const typeWeight = { weather: 1, crime: 2, riot: 3 }[event.type] || 1;
   event.risk_score = Math.min(100, (event.severity * 10) + (typeWeight * 10) - (distance * 5) - (recencyHours * 2));
   return event;
 }
 
 export function sortEvents(events: Event[]): Event[] {
-  return events.sort((a, b) => b.risk_score - a.risk_score);
+  return events.sort((a, b) => (b.risk_score ?? 0) - (a.risk_score ?? 0));
 }
 
 function getDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {

@@ -329,7 +329,8 @@ export async function fetchHapiSummary(): Promise<Map<string, HapiConflictSummar
     }
   }, emptyHapiBatchFallback);
 
-  for (const [cc, summary] of Object.entries(resp.results)) {
+  const safeResults = resp.results && typeof resp.results === 'object' ? resp.results : {};
+  for (const [cc, summary] of Object.entries(safeResults)) {
     byCode.set(cc, toHapiSummary(summary));
   }
 

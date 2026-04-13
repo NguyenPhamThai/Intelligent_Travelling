@@ -67,6 +67,9 @@ export declare const RISK_SCORE_SPEC: Readonly<{
 }>;
 
 export declare function clampRiskScore(score: number): number;
+export declare function sanitizeRiskScore(score: unknown): number | null;
 export declare function calculateRiskScore(event: RiskEvent): number;
+export declare function getRiskLevel(score: number): RiskThreshold;
 export declare function getThreshold(score: number): RiskThreshold;
 export declare function isFullEvent(event: unknown): event is RiskEvent;
+export declare function hasRequiredScoreFields(event: unknown): boolean;

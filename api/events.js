@@ -17,11 +17,7 @@
 
 import { getCorsHeaders } from './_cors.js';
 import { jsonResponse } from './_json-response.js';
-
-// Calculate risk_score from severity: severity * 20
-function calculateRiskScore(severity) {
-  return typeof severity === 'number' ? severity * 20 : null;
-}
+import { calculateRiskScore, getRiskLevel } from '../shared/risk-score.js';
 
 const MOCK_EVENTS = [
   {
@@ -90,10 +86,16 @@ function getEventsInRadius(lat, lon, radiusKm) {
   }))
     .filter((entry) => entry.distance <= radiusKm)
     .sort((a, b) => a.distance - b.distance)
-    .map((entry) => ({
-      ...entry.event,
-      risk_score: calculateRiskScore(entry.event.severity),
-    }));
+    .map((entry) => {
+      const riskScore = calculateRiskScore(entry.event);
+      return {
+        ...entry.event,
+        risk_score: riskScore,
+        source: 'shared_scorer',
+        fallback_used: false,
+        threshold: getRiskLevel(riskScore),
+      };
+    });
 }
 
 function validateCoordinates(lat, lon) {
