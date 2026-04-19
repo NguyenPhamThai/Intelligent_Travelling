@@ -1,0 +1,7 @@
+{
+  "bands": [
+    {"name": "low", "min": 0, "max": 30, "color": "#2ECC71"},
+    {"name": "medium", "min": 31, "max": 60, "color": "#F1C40F"},
+    {"name": "high", "min": 61, "max": 100, "color": "#E74C3C"}
+  ]
+}

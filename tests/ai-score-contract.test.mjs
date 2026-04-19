@@ -40,6 +40,19 @@ afterEach(() => {
 });
 
 describe('/api/ai/score contract', () => {
+  it('returns 400 when id is missing', async () => {
+    const req = {
+      method: 'POST',
+      body: { type: 'riot', severity: 0.7, location: { lat: 1, lon: 2 }, timestamp: Date.now() },
+    };
+    const res = createRes();
+
+    await handler(req, res);
+
+    assert.equal(res.statusCode, 400);
+    assert.ok(Array.isArray(res.payload.required));
+  });
+
   it('returns 400 when required fields are missing', async () => {
     const req = { method: 'POST', body: { type: 'riot', severity: 0.7, location: { lat: 1, lon: 2 } } };
     const res = createRes();

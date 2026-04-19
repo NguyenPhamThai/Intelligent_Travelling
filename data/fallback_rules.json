@@ -1,0 +1,14 @@
+{
+  "defaults": {
+    "risk_score": 0,
+    "type": "unknown",
+    "timestamp": 0
+  },
+  "rules": [
+    "If upstream record omits risk_score -> set risk_score = 0",
+    "If upstream record omits type -> set type = 'unknown'",
+    "If timestamp missing or unparsable -> set timestamp = 0",
+    "Always emit location with numeric lat/lon; if not available use 0.0 for both"
+  ],
+  "note": "All fallbacks produce valid Event objects following strict schema. Prefer upstream fixes over fallbacks in production."
+}
