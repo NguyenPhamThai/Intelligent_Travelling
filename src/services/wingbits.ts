@@ -394,7 +394,7 @@ function extractMilitaryBranch(text: string): string | null {
  */
 export async function enrichAircraft(icao24: string): Promise<EnrichedAircraftInfo | null> {
   const details = await getAircraftDetails(icao24);
-  if (!details || !details.registration) return null;
+  if (!details?.registration) return null;
   return analyzeAircraftDetails(details);
 }
 

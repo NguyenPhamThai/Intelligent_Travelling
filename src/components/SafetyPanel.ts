@@ -3,10 +3,6 @@ import { Panel } from './Panel';
 import { getAllEvents } from '../services/safety/data-pipeline';
 
 export class SafetyPanel extends Panel {
-  constructor(options: any) {
-    super(options);
-  }
-
   async loadData() {
     const events = await getAllEvents();
     // Render events on map/UI

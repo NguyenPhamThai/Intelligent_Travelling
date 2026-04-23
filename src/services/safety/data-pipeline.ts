@@ -1,8 +1,8 @@
 // src/services/safety/data-pipeline.ts
 import { Event } from './types';
 
-const WEATHER_API_KEY = import.meta.env.VITE_OPENWEATHER_API_KEY||'demo';
-const NEWS_API_KEY = import.meta.env.VITE_NEWS_API_KEY||'demo';
+const WEATHER_API_KEY = import.meta.env?.VITE_OPENWEATHER_API_KEY || 'demo';
+const NEWS_API_KEY = import.meta.env?.VITE_NEWS_API_KEY || 'demo';
 
 export async function fetchWeatherEvents(): Promise<Event[]> {
   try {
@@ -12,10 +12,9 @@ export async function fetchWeatherEvents(): Promise<Event[]> {
       const severity = data.weather[0].id >= 500 ? 7 : 3; // Rain = high severity
       return [{
         id: `weather-${Date.now()}`,
-        location: { lat: data.coord.lat, lng: data.coord.lon },
+        location: { lat: data.coord.lat, lon: data.coord.lon },
         type: 'weather' as const,
         severity,
-        risk_score: 0,
         timestamp: Date.now(),
       }];
     }
@@ -32,10 +31,9 @@ export async function fetchNewsEvents(): Promise<Event[]> {
     if (data.articles) {
       return data.articles.slice(0, 5).map((article: any, i: number) => ({
         id: `news-${Date.now()}-${i}`,
-        location: { lat: 21.027763, lng: 105.834160 }, // Mock location, parse if possible
-        type: article.title.toLowerCase().includes('riot') ? 'riot' : article.title.toLowerCase().includes('crime') ? 'crime' : 'disaster',
+        location: { lat: 21.027763, lon: 105.834160 }, // Mock location, parse if possible
+        type: article.title.toLowerCase().includes('riot') ? 'riot' : article.title.toLowerCase().includes('crime') ? 'crime' : 'weather',
         severity: 6, // Assume medium
-        risk_score: 0,
         timestamp: Date.now(),
       }));
     }

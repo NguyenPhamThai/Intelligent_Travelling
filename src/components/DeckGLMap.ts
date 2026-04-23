@@ -675,7 +675,9 @@ export class DeckGLMap {
     }
 
     const basemapEl = document.getElementById('deckgl-basemap');
-    if (!basemapEl) return;
+    if (!basemapEl) {
+      throw new Error('deckgl-basemap element not found');
+    }
 
     this.maplibreMap = new maplibregl.Map({
       container: basemapEl,

@@ -2830,7 +2830,7 @@ export class DataLoaderManager implements AppModule {
     try {
       type CachedItem = Omit<NewsItem, 'pubDate'> & { pubDate: number };
       const entry = await getPersistentCache<CachedItem[]>(DataLoaderManager.HAPPY_ITEMS_CACHE_KEY);
-      if (!entry || !entry.data || entry.data.length === 0) return;
+      if (!entry?.data || entry.data.length === 0) return;
       if (Date.now() - entry.updatedAt > 24 * 60 * 60 * 1000) return;
 
       const items: NewsItem[] = entry.data.map(item => ({

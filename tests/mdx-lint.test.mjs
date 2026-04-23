@@ -15,7 +15,10 @@ import { join } from 'node:path';
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
-const DOCS_DIR = new URL('../docs/', import.meta.url).pathname;
+import { fileURLToPath } from 'node:url';
+
+const __dirname = fileURLToPath(new URL('.', import.meta.url));
+const DOCS_DIR = join(__dirname, '..', 'docs');
 
 // Parse .mintignore for excluded files/dirs
 const mintignorePath = join(DOCS_DIR, '.mintignore');
@@ -33,9 +36,28 @@ function isIgnored(filename) {
   });
 }
 
-const docFiles = readdirSync(DOCS_DIR)
-  .filter(f => (f.endsWith('.mdx') || f.endsWith('.md')) && !isIgnored(f))
-  .map(f => join(DOCS_DIR, f));
+function getAllDocs(dir) {
+  let results = [];
+
+  const list = readdirSync(dir, { withFileTypes: true });
+
+  for (const file of list) {
+    const fullPath = join(dir, file.name);
+
+    if (file.isDirectory()) {
+      results = results.concat(getAllDocs(fullPath));
+    } else if (
+      (file.name.endsWith('.md') || file.name.endsWith('.mdx')) &&
+      !isIgnored(fullPath.replace(DOCS_DIR, ''))
+    ) {
+      results.push(fullPath);
+    }
+  }
+
+  return results;
+}
+
+const docFiles = getAllDocs(DOCS_DIR);
 
 /** Strip fenced code blocks and inline code spans from content. */
 function stripCode(content) {

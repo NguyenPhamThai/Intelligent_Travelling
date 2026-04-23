@@ -562,7 +562,7 @@ export class App {
 
     // Desktop key management panel must always remain accessible in Tauri.
     if (isDesktopApp) {
-      if (!panelSettings['runtime-config'] || !panelSettings['runtime-config'].enabled) {
+      if (!panelSettings['runtime-config']?.enabled) {
         panelSettings['runtime-config'] = {
           ...panelSettings['runtime-config'],
           name: panelSettings['runtime-config']?.name ?? 'Desktop Configuration',
@@ -776,8 +776,9 @@ export class App {
     await fetchBootstrapData();
     this.bootstrapHydrationState = getBootstrapHydrationState();
 
-    // Verify OAuth OTT and hydrate auth session BEFORE any UI subscribes to auth state
-    if (isProUser()) {
+    // Verify OAuth OTT and hydrate auth session BEFORE any UI subscribes to auth state.
+    // Do not gate on current role; anonymous users must still see Sign In.
+    if (!isDesktopRuntime()) {
       await initAuthState();
       initAuthAnalytics();
     }
@@ -850,7 +851,7 @@ export class App {
     correlationEngine.registerAdapter(disasterAdapter);
     this.state.correlationEngine = correlationEngine;
     this.eventHandlers.setupUnifiedSettings();
-    if (isProUser()) this.eventHandlers.setupAuthWidget();
+    if (!isDesktopRuntime()) this.eventHandlers.setupAuthWidget();
 
     // Phase 4: SearchManager, MapLayerHandlers, CountryIntel
     this.searchManager.init();

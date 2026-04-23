@@ -703,7 +703,7 @@ similarity(A, B) = |A ∩ B| / |A ∪ B|
 
 - Headlines are lowercased and split on word boundaries
 - Stop words removed: "the", "a", "an", "in", "on", "at", "to", "for", "of", "and", "or"
-- Short tokens (<3 characters) filtered out
+- Short tokens (&lt;3 characters) filtered out
 - Result cached per headline for performance
 
 **Inverted Index Optimization**:
@@ -727,7 +727,7 @@ Each news cluster tracks publication velocity:
 
 - **Sources per hour** = article count / time span
 - **Trend** = rising/stable/falling based on first-half vs second-half publication rate
-- **Levels**: Normal (<3/hr), Elevated (3-6/hr), Spike (>6/hr)
+- **Levels**: Normal (&lt;3/hr), Elevated (3-6/hr), Spike (>6/hr)
 
 ### Sentiment Detection
 
@@ -737,7 +737,7 @@ Headlines are scored against curated word lists:
 
 **Positive indicators**: peace, deal, agreement, breakthrough, recovery, growth, ceasefire, treaty, alliance, victory...
 
-Score determines sentiment classification: negative (<-1), neutral (-1 to +1), positive (>+1)
+Score determines sentiment classification: negative (&lt;-1), neutral (-1 to +1), positive (>+1)
 
 ### Entity Extraction
 
@@ -793,8 +793,8 @@ Deviation levels:
 
 - **Spike**: Z > 2.5 (statistically rare increase)
 - **Elevated**: Z > 1.5
-- **Normal**: -2 < Z < 1.5
-- **Quiet**: Z < -2 (unusually low activity)
+- **Normal**: -2 &lt; Z &lt; 1.5
+- **Quiet**: Z &lt; -2 (unusually low activity)
 
 This enables detection of anomalous activity even when absolute numbers seem normal.
 
@@ -818,7 +818,7 @@ The system counts matching news articles in the current feed, applies velocity a
 
 | Level | Criteria | Visual |
 |-------|----------|--------|
-| **Low** | <3 matches, normal velocity | Gray marker |
+| **Low** | &lt;3 matches, normal velocity | Gray marker |
 | **Elevated** | 3-6 matches OR elevated velocity | Yellow pulse |
 | **High** | >6 matches OR spike velocity | Red pulse |
 
@@ -860,7 +860,7 @@ The system maintains 48-point history (24 hours at 30-minute intervals) per hots
 
 - **Linear regression** calculates slope of recent scores
 - **Rising**: Slope > +0.1 points per interval
-- **Falling**: Slope < -0.1 points per interval
+- **Falling**: Slope &lt; -0.1 points per interval
 - **Stable**: Slope within ±0.1
 
 **Signal Generation**
@@ -1051,7 +1051,7 @@ Beyond the base component scores, several contextual factors can boost a country
 
 - Information ≥70: +5 points
 - Information ≥50: +3 points
-- Information <50: +0 points
+- Information &lt;50: +0 points
 
 **Focal Point Boost Tiers**:
 
@@ -1377,7 +1377,7 @@ Aggregate activity maps to a 5-level readiness scale:
 | **DEFCON 2** | ≥75% | FAST PACE | High activity; significant event underway |
 | **DEFCON 3** | ≥50% | ROUND HOUSE | Elevated; above-normal operations |
 | **DEFCON 4** | ≥25% | DOUBLE TAKE | Increased vigilance |
-| **DEFCON 5** | <25% | FADE OUT | Normal peacetime operations |
+| **DEFCON 5** | &lt;25% | FADE OUT | Normal peacetime operations |
 
 ### GDELT Tension Pairs
 
@@ -2210,12 +2210,12 @@ Each data source has calibrated freshness expectations:
 
 | Source | Expected Interval | "Fresh" Threshold |
 |--------|------------------|-------------------|
-| News feeds | 5 minutes | <10 minutes |
-| Stock quotes | 1 minute | <5 minutes |
-| Earthquakes | 5 minutes | <15 minutes |
-| Weather | 10 minutes | <30 minutes |
-| Flight delays | 10 minutes | <20 minutes |
-| AIS vessels | Real-time | <1 minute |
+| News feeds | 5 minutes | &lt;10 minutes |
+| Stock quotes | 1 minute | &lt;5 minutes |
+| Earthquakes | 5 minutes | &lt;15 minutes |
+| Weather | 10 minutes | &lt;30 minutes |
+| Flight delays | 10 minutes | &lt;20 minutes |
+| AIS vessels | Real-time | &lt;1 minute |
 
 ### Visual Indicators
 
@@ -2533,7 +2533,7 @@ When news mentions flow disruptions, two signal types may trigger:
 | Signal | Criteria | Meaning |
 |--------|----------|---------|
 | **Flow Drop** | Pipeline keywords + disruption terms | Potential supply interruption |
-| **Flow-Price Divergence** | Flow drop news + oil price stable (< $1.50 move) | Markets not yet pricing in disruption |
+| **Flow-Price Divergence** | Flow drop news + oil price stable (&lt; $1.50 move) | Markets not yet pricing in disruption |
 
 ### Why This Matters
 
@@ -2909,7 +2909,7 @@ When both GDACS and EONET report the same event:
 
 To prevent map clutter, natural events are filtered:
 
-- **Wildfires**: Only events < 48 hours old (older fires are either contained or well-known)
+- **Wildfires**: Only events &lt; 48 hours old (older fires are either contained or well-known)
 - **Earthquakes**: M4.5+ globally, lower threshold for populated areas
 - **Storms**: Only named storms or those with warnings
 
