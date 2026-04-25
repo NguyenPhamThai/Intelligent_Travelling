@@ -25,5 +25,32 @@
     "risk_score": 45,
     "description": "Ghi nhận nhiều vụ trộm cắp tài sản khách du lịch.",
     "timestamp": 1712920800
+  },
+  {
+    "id": "weather_tokyo",
+    "location": { "lat": 35.6762, "lon": 139.6503 },
+    "type": "weather",
+    "severity": 0.2,
+    "risk_score": 10,
+    "description": "Cảnh báo thời tiết nhẹ tại Tokyo, Nhật Bản.",
+    "timestamp": 1712922000
+  },
+  {
+    "id": "crime_paris",
+    "location": { "lat": 48.8566, "lon": 2.3522 },
+    "type": "crime",
+    "severity": 0.6,
+    "risk_score": 48,
+    "description": "Tăng cường cảnh giác tội phạm tại Paris, Pháp.",
+    "timestamp": 1712923200
+  },
+  {
+    "id": "riot_kabul",
+    "location": { "lat": 34.5553, "lon": 69.2075 },
+    "type": "riot",
+    "severity": 0.8,
+    "risk_score": 80,
+    "description": "Biểu tình căng thẳng tại Kabul, Afghanistan.",
+    "timestamp": 1712924400
   }
 ]
