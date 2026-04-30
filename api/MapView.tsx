@@ -1,8 +1,8 @@
 import React from "react";
-import { useEventFilter, EventType } from "./useEventFilter";
+import { useEventFilter, EventType } from "./map-logic";
 
-/** Fake component Map */
-const Map = ({
+/** Fake component MapView */
+const MapView = ({
   children,
 }: {
   children: React.ReactNode;
@@ -44,12 +44,18 @@ const Legend = ({ activeFilters, onToggle }: LegendProps) => (
       { key: "yellow", label: "Cảnh báo (30-70)", color: "#f1c40f" },
       { key: "red", label: "Nguy hiểm (>70)", color: "#e74c3c" },
     ].map((item) => (
-      <div
+      <button
         key={item.key}
+        type="button"
         onClick={() => onToggle(item.key)}
         style={{
           opacity: activeFilters.includes(item.key) ? 1 : 0.3,
           cursor: "pointer",
+          display: "block",
+          marginBottom: "8px",
+          border: "none",
+          background: "transparent",
+          textAlign: "left",
         }}
       >
         <span
@@ -63,7 +69,7 @@ const Legend = ({ activeFilters, onToggle }: LegendProps) => (
           }}
         ></span>
         {item.label}
-      </div>
+      </button>
     ))}
   </div>
 );
@@ -83,7 +89,7 @@ export const SafetyMap = ({
         onToggle={toggleFilter}
       />
 
-      <Map zoom={12} center={defaultCenter}>
+      <MapView zoom={12} center={defaultCenter}>
         {filteredEvents.map((event: EventType) => (
           <Marker
             key={event.id}
@@ -92,7 +98,7 @@ export const SafetyMap = ({
             tooltip={event.type}
           />
         ))}
-      </Map>
+      </MapView>
     </div>
   );
 };
