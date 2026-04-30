@@ -1,4 +1,3 @@
-//Để hỗ trợ việc hiển thị Label/Tooltip hiệu quả, bổ sung trường vào Schema:
 {
   "display_config": {
     "show_label_on_zoom": 15,
