@@ -24,7 +24,7 @@ const getThreshold = (score: number): string => {
 };
 
 export const useEventFilter = (events: EventType[]) => {
-  const [activeFilters, setActiveFilters] = useState<string[]>([
+  const [activeFilters, setActiveFilters] = useState([
     "green",
     "yellow",
     "red",
