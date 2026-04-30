@@ -1,11 +1,11 @@
-import React from "react";
+import { ReactNode } from "react";
 import { useEventFilter, EventType } from "./map-logic";
 
 /** Fake component MapView */
 const MapView = ({
   children,
 }: {
-  children: React.ReactNode;
+  children: ReactNode;
   zoom: number;
   center: { lat: number; lng: number };
 }) => <div className="map">{children}</div>;
