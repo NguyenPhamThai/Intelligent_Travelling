@@ -21,6 +21,27 @@ export const MOCK_EVENTS: Event[] = [
     type: "weather",
     severity: 0.4,
     timestamp: Date.now()
+  },
+  {
+    id: "4",
+    location: { lat: 35.6762, lon: 139.6503 },
+    type: "weather",
+    severity: 0.1,
+    timestamp: Date.now()
+  },
+  {
+    id: "5",
+    location: { lat: 48.8566, lon: 2.3522 },
+    type: "crime",
+    severity: 0.5,
+    timestamp: Date.now()
+  },
+  {
+    id: "6",
+    location: { lat: 34.5553, lon: 69.2075 },
+    type: "riot",
+    severity: 0.9,
+    timestamp: Date.now()
   }
 ];
 
