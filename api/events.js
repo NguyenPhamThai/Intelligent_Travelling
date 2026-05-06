@@ -20,44 +20,49 @@ import { jsonResponse } from './_json-response.js';
 import { calculateRiskScore, getRiskLevel } from '../shared/risk-score.js';
 
 const MOCK_EVENTS = [
+  // RED (score > 70): High severity
   {
     id: 'evt-001-hanoi-riot',
     title: 'Hanoi Riot Alert',
     location: { lat: 21.0285, lon: 105.8542 },
     type: 'riot',
-    severity: 8,
+    severity: 0.8,
     timestamp: Date.now(),
   },
+  // YELLOW (30-70): Medium severity
   {
     id: 'evt-002-hcmc-crime',
     title: 'HCMC Crime Surge',
     location: { lat: 10.8231, lon: 106.6297 },
     type: 'crime',
-    severity: 6,
+    severity: 0.6,
     timestamp: Date.now() - 600000,
   },
+  // YELLOW (30-70): Medium severity weather
   {
     id: 'evt-003-da-nang-weather',
     title: 'Da Nang Weather Alert',
     location: { lat: 16.0544, lon: 108.2022 },
     type: 'weather',
-    severity: 7,
+    severity: 0.8,
     timestamp: Date.now() - 1200000,
   },
+  // GREEN (< 30): Low severity
   {
     id: 'evt-004-hue-riot',
     title: 'Hue Protest',
     location: { lat: 16.4637, lon: 107.5909 },
     type: 'riot',
-    severity: 5,
+    severity: 0.2,
     timestamp: Date.now() - 3600000,
   },
+  // RED (score > 70): High severity
   {
     id: 'evt-005-nha-trang-crime',
     title: 'Nha Trang Incident',
     location: { lat: 12.2388, lon: 109.1967 },
     type: 'crime',
-    severity: 4,
+    severity: 0.95,
     timestamp: Date.now() - 7200000,
   },
 ];
@@ -85,7 +90,6 @@ function getEventsInRadius(lat, lon, radiusKm) {
     distance: haversineDistance(lat, lon, event.location.lat, event.location.lon),
   }))
     .filter((entry) => entry.distance <= radiusKm)
-    .sort((a, b) => a.distance - b.distance)
     .map((entry) => {
       const riskScore = calculateRiskScore(entry.event);
       return {
@@ -95,7 +99,8 @@ function getEventsInRadius(lat, lon, radiusKm) {
         fallback_used: false,
         threshold: getRiskLevel(riskScore),
       };
-    });
+    })
+    .sort((a, b) => (b.risk_score ?? 0) - (a.risk_score ?? 0));
 }
 
 function validateCoordinates(lat, lon) {
