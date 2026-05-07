@@ -47,11 +47,13 @@ export function calculateRiskScore(severity: number, distance: number): number {
         scoring_source: 'ai',
         scoring_status: 'ok'
     };
-} catch (error) {
+} catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "AI_UNKOWN_ERROR";
+    //2. Deterministic fallback 
+    console.warn('[AI_ENGINE] Fallback triggered: ${message}');
     // Tu dong kich hoat Fallback khi co loi 
     const fallbackScore = calculateFallbackScore(eventData.type, eventData.severity);
-    console.warn(`[AI_ENGINE] Chế độ Fallback được kích hoạt: ${error.message}`);
-
+    
     return {
         risk_score: fallbackScore,
         scoring_source: 'rule_based',
