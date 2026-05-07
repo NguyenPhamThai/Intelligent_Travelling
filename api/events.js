@@ -22,7 +22,7 @@
 import { getCorsHeaders } from './_cors.js';
 import { jsonResponse } from './_json-response.js';
 import { calculateRiskScore, getRiskLevel } from '../shared/risk-score.js';
-import { readJsonFromUpstash } from './_upstash-json.js';
+import { readJsonFromUpstash, writeJsonToUpstash } from './_upstash-json.js';
 
 // Cache key canonicalization
 export function buildCanonicalCacheKey(params) {
@@ -50,7 +50,26 @@ export function buildCanonicalCacheKey(params) {
     `risk_level:${risk_level}`,
   ].sort();
 
-  return `events:${keyParts.join('|')}`;
+  // Namespace with version to allow safe invalidation/rolling upgrades
+  return `events:v1:${keyParts.join('|')}`;
+}
+
+// Build Redis SCAN-friendly patterns for targeted invalidation.
+// Returns an array of glob patterns that can be supplied to `api/cache-purge.js`.
+export function buildCachePurgePatterns({ lat, lon, radius, time_range, category, risk_level } = {}) {
+  const parts = [];
+  if (lat !== undefined) parts.push(`lat:${Math.round(lat * 10000) / 10000}`);
+  if (lon !== undefined) parts.push(`lon:${Math.round(lon * 10000) / 10000}`);
+  if (radius !== undefined) parts.push(`radius:${radius}`);
+  if (time_range !== undefined) parts.push(`time_range:${time_range}`);
+  if (category !== undefined) parts.push(`category:${category}`);
+  if (risk_level !== undefined) parts.push(`risk_level:${risk_level}`);
+
+  // Because keys are 'events:v1:' + sorted('|') joined parts, we match any key containing all parts in any order
+  // by using wildcard before/after each part and combining into a single pattern.
+  if (parts.length === 0) return [`events:v1:*`];
+  const compound = parts.map(p => `*${p}*`).join('');
+  return [`events:v1:${compound}`];
 }
 
 // TTL policy matrix
@@ -230,7 +249,20 @@ export default async function handler(request) {
     radiusKm = radiusNum;
   }
 
-  const params = { lat, lon, radius: radiusKm };
+  // Parse additional query params that affect results
+  const pageParam = url.searchParams.get('page');
+  const pageSizeParam = url.searchParams.get('page_size') || url.searchParams.get('pageSize');
+  const timeRangeParam = url.searchParams.get('time_range') || url.searchParams.get('timeRange');
+  const categoryParam = url.searchParams.get('category');
+  const riskLevelParam = url.searchParams.get('risk_level') || url.searchParams.get('riskLevel');
+
+  const page = Number.isFinite(Number(pageParam)) ? Number(pageParam) : 1;
+  const page_size = Number.isFinite(Number(pageSizeParam)) ? Number(pageSizeParam) : 10;
+  const time_range = timeRangeParam || 'all';
+  const category = categoryParam || 'all';
+  const risk_level = riskLevelParam || 'all';
+
+  const params = { lat, lon, radius: radiusKm, page, page_size, time_range, category, risk_level };
   const cacheKey = buildCanonicalCacheKey(params);
   const ttl = getTTLForQuery(params.time_range || 'all');
 
@@ -257,14 +289,23 @@ export default async function handler(request) {
   const responseData = {
     events,
     total: events.length,
-    query: { lat, lon, radius_km: radiusKm },
+    query: { lat, lon, radius_km: radiusKm, page, page_size, time_range, category, risk_level },
     timestamp: Date.now(),
   };
 
   const freshData = addFreshnessMetadata(responseData, Date.now());
 
-  // Cache the fresh data (in real impl, would write to Redis)
-  // For now, just return fresh data
+  // Cache the fresh data: write to Upstash (non-blocking)
+  try {
+    // write main cache entry with TTL
+    writeJsonToUpstash(cacheKey, freshData, ttl).catch((err) => console.warn('Cache write failed:', err.message));
+    // write seed-meta for freshness tracking (longer TTL)
+    const seedMetaKey = `seed-meta:${cacheKey}`;
+    const seedMeta = { fetchedAt: Date.now(), recordCount: events.length };
+    writeJsonToUpstash(seedMetaKey, seedMeta, Math.max(60, ttl * 2)).catch((err) => console.warn('Seed-meta write failed:', err.message));
+  } catch (err) {
+    console.warn('Cache pipeline error:', err.message);
+  }
 
   return jsonResponse(freshData, 200, corsHeaders);
 }
