@@ -12,7 +12,7 @@ export function calculateRiskScore(severity: number, distance: number): number {
 */
  const EVENT_WEIGHTS: Record <string, number> = {
     'conflict' : 0.95,
-    'natural_disater': 0.85,
+    'natural_disaster': 0.85,
     'infrastructure': 0.70,
     'general': 0.40
  };
@@ -48,9 +48,9 @@ export function calculateRiskScore(severity: number, distance: number): number {
         scoring_status: 'ok'
     };
 } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : "UNKOWN";
+    const message = error instanceof Error ? error.message : "UNKNOWN_ERROR";
     //2. Deterministic fallback 
-    console.warn(`[AI_ENGINE] Fallback active: ${message}`);
+    console.warn(`[AI_ENGINE] Fallback triggered: ${message}`);
     // Tu dong kich hoat Fallback khi co loi 
     const fallbackScore = calculateFallbackScore(eventData.type, eventData.severity);
 
