@@ -378,7 +378,7 @@ test.describe('desktop runtime routing guardrails', () => {
 
     expect(result.macArm).toBe('https://worldmonitor.app/api/download?platform=macos-arm64&variant=full');
     expect(result.windowsX64).toBe('https://worldmonitor.app/api/download?platform=windows-exe&variant=full');
-    expect(result.linuxFallback).toBe('https://github.com/koala73/worldmonitor/releases/latest');
+    expect(result.linuxFallback).toBe('https://worldmonitor.app/api/download?platform=linux-appimage&variant=full');
   });
 
   test('MapContainer falls back to SVG when WebGL2 is unavailable', async ({ page }) => {
@@ -565,7 +565,12 @@ test.describe('desktop runtime routing guardrails', () => {
         // Sebuf proto: POST /api/market/v1/list-market-quotes
         if (parsed.pathname === '/api/market/v1/list-market-quotes') {
           const body = init?.body ? JSON.parse(String(init.body)) : {};
-          const symbols: string[] = body.symbols || [];
+          const querySymbols = (parsed.searchParams.get('symbols') || '')
+            .split(',')
+            .map((s) => s.trim())
+            .filter(Boolean);
+          const bodySymbols = Array.isArray(body.symbols) ? body.symbols : [];
+          const symbols: string[] = bodySymbols.length > 0 ? bodySymbols : querySymbols;
           const quotes = symbols
             .filter((s: string) => yahooOnly.has(s))
             .map((s: string) => {
@@ -588,6 +593,25 @@ test.describe('desktop runtime routing guardrails', () => {
               { name: 'Solana', symbol: 'SOL', price: 120, change: 2.1, sparkline: [1, 2, 3] },
             ],
           });
+        }
+
+        if (parsed.pathname === '/api/market/v1/list-commodity-quotes') {
+          const symbols = (parsed.searchParams.get('symbols') || '')
+            .split(',')
+            .map((s) => s.trim())
+            .filter(Boolean);
+          const quotes = symbols.map((s) => {
+            const base = s.length * 100;
+            return {
+              symbol: s,
+              name: s,
+              display: s,
+              price: base + 2,
+              change: 1.1,
+              sparkline: [base - 1, base, base + 1, base + 2],
+            };
+          });
+          return responseJson({ quotes });
         }
 
         return responseJson({});
@@ -631,6 +655,9 @@ test.describe('desktop runtime routing guardrails', () => {
         const marketQuoteCalls = calls.filter((url) =>
           new URL(url).pathname === '/api/market/v1/list-market-quotes'
         );
+        const commodityQuoteCalls = calls.filter((url) =>
+          new URL(url).pathname === '/api/market/v1/list-commodity-quotes'
+        );
 
         return {
           marketRenders,
@@ -643,6 +670,7 @@ test.describe('desktop runtime routing guardrails', () => {
           apiStatuses,
           latestMarketsCount: fakeApp.ctx.latestMarkets.length,
           marketQuoteCalls: marketQuoteCalls.length,
+          commodityQuoteCalls: commodityQuoteCalls.length,
         };
       } finally {
         window.fetch = originalFetch;
@@ -658,8 +686,8 @@ test.describe('desktop runtime routing guardrails', () => {
 
     expect(result.commoditiesRenders.some((count) => count > 0)).toBe(true);
     expect(result.commoditiesConfigErrors.length).toBe(0);
-    // Commodities go through listMarketQuotes batch (at least 2 calls: stocks + commodities)
-    expect(result.marketQuoteCalls).toBeGreaterThanOrEqual(2);
+    expect(result.marketQuoteCalls).toBeGreaterThanOrEqual(1);
+    expect(result.commodityQuoteCalls).toBeGreaterThanOrEqual(1);
 
     expect(result.cryptoRenders.some((count) => count > 0)).toBe(true);
     expect(result.apiStatuses.some((entry) => entry.name === 'Finnhub' && entry.status === 'error')).toBe(true);
@@ -686,9 +714,30 @@ test.describe('desktop runtime routing guardrails', () => {
 
       window.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
         const parsed = new URL(toUrl(input));
+        if (parsed.pathname === '/api/conflict/v1/get-humanitarian-summary-batch') {
+          const body = init?.body ? JSON.parse(String(init.body)) : {};
+          const countryCodes: string[] = Array.isArray(body.countryCodes) ? body.countryCodes : [];
+          for (const code of countryCodes) seenCountryCodes.add(String(code).toUpperCase());
+          const results = Object.fromEntries(
+            countryCodes.map((code) => {
+              const countryCode = String(code).toUpperCase();
+              return [countryCode, {
+                countryCode,
+                countryName: countryCode,
+                conflictEventsTotal: 1,
+                conflictPoliticalViolenceEvents: 1,
+                conflictFatalities: 1,
+                referencePeriod: '2026-02',
+                conflictDemonstrations: 0,
+                updatedAt: Date.now(),
+              }];
+            })
+          );
+          return responseJson({ results, fetched: countryCodes.length, requested: countryCodes.length });
+        }
         if (parsed.pathname === '/api/conflict/v1/get-humanitarian-summary') {
           const body = init?.body ? JSON.parse(String(init.body)) : {};
-          const countryCode = String(body.countryCode || '').toUpperCase();
+          const countryCode = String(body.countryCode || parsed.searchParams.get('country_code') || '').toUpperCase();
           seenCountryCodes.add(countryCode);
           return responseJson({
             summary: {

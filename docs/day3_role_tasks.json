@@ -1,0 +1,177 @@
+{
+  "day": 3,
+  "roles": {
+    "BA": {
+      "tasks": [
+        {
+          "title": "Finalize filter spec",
+          "steps": [
+            "Confirm allowed `type` values",
+            "Define numeric `risk_score` bands",
+            "Publish `docs/ba_filter_spec.json`"
+          ],
+          "input": ["Product goals", "Event model"],
+          "output": ["docs/ba_filter_spec.json"],
+          "dependencies": [],
+          "done_definition": "Spec committed and BA signed off",
+          "priority": "High",
+          "estimate_hours": 1.5
+        },
+        {
+          "title": "Example queries & UI states",
+          "steps": ["Create 3 example queries","Provide 3 UI mock states/screenshots"],
+          "input": ["filter spec"],
+          "output": ["examples attached to spec"],
+          "dependencies": ["Finalize filter spec"],
+          "done_definition": "Examples attached in docs repository",
+          "priority": "Medium",
+          "estimate_hours": 1.0
+        },
+        {
+          "title": "Acceptance criteria",
+          "steps": ["Write PASS conditions for tester/frontend/server"],
+          "input": ["filter spec"],
+          "output": ["acceptance checklist in spec"],
+          "dependencies": ["Finalize filter spec"],
+          "done_definition": "Checklist present in docs/ba_filter_spec.json",
+          "priority": "High",
+          "estimate_hours": 0.5
+        }
+      ]
+    },
+    "Data Engineer": {
+      "tasks": [
+        {
+          "title": "Produce canonical sample dataset",
+          "steps": ["Gather/or synthesize ~40 records","Ensure strict Event schema","Commit src/mocks/sample_events.json"],
+          "input": ["source samples or synthetic generator"],
+          "output": ["src/mocks/sample_events.json","src/mocks/sample_events_empty.json"],
+          "dependencies": ["BA filter spec for allowed types"],
+          "done_definition": "File present with 30-50 valid Event objects",
+          "priority": "High",
+          "estimate_hours": 2.5
+        },
+        {
+          "title": "Schema validation report & fallback rules",
+          "steps": ["Validate each record types/ranges","Document fallbacks (e.g., default risk_score=0,type='unknown')","Commit data/schema_validation_report.json"],
+          "input": ["sample_events.json"],
+          "output": ["data/schema_validation_report.json"],
+          "dependencies": ["Sample dataset"],
+          "done_definition": "Report shows 0 invalid records and fallback rules documented",
+          "priority": "High",
+          "estimate_hours": 2.0
+        }
+      ]
+    },
+    "AI Engineer": {
+      "tasks": [
+        {
+          "title": "Define risk->color mapping v0",
+          "steps": ["Choose numeric bands","Assign hex color to each band","Publish ai/risk_color_mapping.json"],
+          "input": ["BA risk bands"],
+          "output": ["ai/risk_color_mapping.json"],
+          "dependencies": ["BA spec"],
+          "done_definition": "Mapping file present and agreed by BA/Frontend",
+          "priority": "High",
+          "estimate_hours": 1.5
+        },
+        {
+          "title": "Produce labeled examples (without changing schema)",
+          "steps": ["Map sample_events IDs to band names","Commit ai/event_color_labels.json"],
+          "input": ["sample_events.json","risk_color_mapping.json"],
+          "output": ["ai/event_color_labels.json"],
+          "dependencies": ["Data Engineer sample dataset","risk mapping"],
+          "done_definition": "Label file exists mapping event id -> band",
+          "priority": "Medium",
+          "estimate_hours": 1.5
+        }
+      ]
+    },
+    "Backend": {
+      "tasks": [
+        {
+          "title": "Implement GET /events endpoint",
+          "steps": ["Load sample dataset","Implement query parsing (type,min_risk,max_risk)","Validate params and return 400 on bad input","Return [] on no matches"],
+          "input": ["sample_events.json","BA spec"],
+          "output": ["server/mock_events_api.js"],
+          "dependencies": ["Data Engineer dataset","BA spec"],
+          "done_definition": "Endpoint returns filtered events and validates params",
+          "priority": "High",
+          "estimate_hours": 4.0
+        },
+        {
+          "title": "Provide dev mock/static files",
+          "steps": ["Serve /ai mapping","Serve demo UI statically for manual testing"],
+          "input": ["ai files","demo UI"],
+          "output": ["server serves / and /ai"],
+          "dependencies": ["AI mapping, demo UI"],
+          "done_definition": "Static assets reachable and API works together",
+          "priority": "Medium",
+          "estimate_hours": 1.0
+        }
+      ]
+    },
+    "Frontend": {
+      "tasks": [
+        {
+          "title": "Build filter UI component",
+          "steps": ["Add type checkboxes","Add min/max risk inputs","Emit filter state on change"],
+          "input": ["BA spec","ai mapping for colors"],
+          "output": ["demo/filter_ui/index.html"],
+          "dependencies": ["BA spec"],
+          "done_definition": "UI renders and emits filter state (manual verified)",
+          "priority": "High",
+          "estimate_hours": 4.0
+        },
+        {
+          "title": "Wire to API and render results safely",
+          "steps": ["Call /events with params","Render list with color badges","Handle empty list and missing fields without crash"],
+          "input": ["server /events","ai mapping"],
+          "output": ["working UI that shows filtered events"],
+          "dependencies": ["Backend endpoint","AI mapping"],
+          "done_definition": "List updates with filters and no console errors on empty data",
+          "priority": "High",
+          "estimate_hours": 3.0
+        }
+      ]
+    },
+    "Tester": {
+      "tasks": [
+        {
+          "title": "Write test matrix",
+          "steps": ["Create cases for type, ranges, boundaries, invalid params, empty dataset"],
+          "input": ["BA spec","sample_events.json"],
+          "output": ["tests/filter_test_matrix.md"],
+          "dependencies": ["BA spec, Data Engineer"],
+          "done_definition": "Matrix committed to repo",
+          "priority": "High",
+          "estimate_hours": 1.5
+        },
+        {
+          "title": "Run manual acceptance tests",
+          "steps": ["Execute matrix against demo UI & API","Log bugs with repro steps"],
+          "input": ["running demo + server"],
+          "output": ["bug list or test run notes"],
+          "dependencies": ["Frontend, Backend"],
+          "done_definition": "All high/critical issues triaged or fixed",
+          "priority": "High",
+          "estimate_hours": 2.0
+        }
+      ]
+    },
+    "Leader": {
+      "tasks": [
+        {
+          "title": "Validate and sign off",
+          "steps": ["Run a quick acceptance (empty-data + a few filters)","Verify no schema mismatches","Sign off or list blockers"],
+          "input": ["Tester results, demo build"],
+          "output": ["leader/leader_validation.md"],
+          "dependencies": ["All roles"],
+          "done_definition": "Leader sign-off READY or documented NOT READY blockers",
+          "priority": "High",
+          "estimate_hours": 1.0
+        }
+      ]
+    }
+  }
+}

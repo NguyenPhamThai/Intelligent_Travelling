@@ -1,0 +1,7 @@
+{
+  "display_config": {
+    "show_label_on_zoom": 15,
+    "cluster_enabled": true,
+    "priority": "high" 
+  }
+}

@@ -7,6 +7,7 @@ export function calculateRiskScore(severity: number, distance: number): number {
   
   return Math.round(finalScore);
 }
+<<<<<<< HEAD
 /**  
  *1. Hàm tính điểm Fallback (Rule-based)
  * Dùng khi AI bị lỗi hoặc Timeout, đảm bảo luôn có kết quả cho demo 
@@ -73,3 +74,8 @@ export function getRiskLevel(score: number) {
     }
     return { level: 'An toàn', color: 'Green', hex: '#2ecc71' }; // An toàn < 30
 }
+=======
+// AI Engineer: Use canonical getRiskLevel from shared/risk-score-spec.js
+// Ensures consistent mapping: 'green' | 'yellow' | 'red' across the system
+export { getRiskLevel } from '../../shared/risk-score-spec.js';
+>>>>>>> upstream/main

@@ -1,0 +1,14 @@
+{
+  "edge_cases": [
+    {"id":"evt-0003","reason":"risk_score == 0 (lowest)"},
+    {"id":"evt-0021","reason":"risk_score == 0 (lowest)"},
+    {"id":"evt-0007","reason":"risk_score == 100 (highest)"},
+    {"id":"evt-0022","reason":"risk_score == 100 (highest)"},
+    {"id":"evt-0008","reason":"boundary low max == 30"},
+    {"id":"evt-0015","reason":"boundary low->medium == 31"},
+    {"id":"evt-0016","reason":"boundary medium max == 60"},
+    {"id":"evt-0024","reason":"boundary medium->high == 61"},
+    {"id":"evt-0035","reason":"type 'unknown' (missing upstream type simulation)"},
+    {"id":"evt-0039","reason":"timestamp == 0 (missing timestamp simulation)"}
+  ]
+}

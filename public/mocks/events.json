@@ -2,10 +2,33 @@
   {
     "id": "1",
     "title": "Mock Event",
-    "type": "fire",
-    "location": { "lat": 40.7128, "lng": -74.006 },
+    "type": "weather",
+    "location": { "lat": 40.7128, "lon": -74.006 },
     "severity": 3,
-    "risk_score": null,
     "timestamp": 1712600000000
+  },
+  {
+    "id": "tokyo_weather",
+    "title": "Tokyo Weather Alert",
+    "type": "weather",
+    "location": { "lat": 35.6762, "lon": 139.6503 },
+    "severity": 1,
+    "timestamp": 1712922000000
+  },
+  {
+    "id": "paris_crime",
+    "title": "Paris Crime Warning",
+    "type": "crime",
+    "location": { "lat": 48.8566, "lon": 2.3522 },
+    "severity": 2,
+    "timestamp": 1712923200000
+  },
+  {
+    "id": "kabul_riot",
+    "title": "Kabul Riot Escalation",
+    "type": "riot",
+    "location": { "lat": 34.5553, "lon": 69.2075 },
+    "severity": 4,
+    "timestamp": 1712924400000
   }
 ]

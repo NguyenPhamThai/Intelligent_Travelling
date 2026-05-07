@@ -6,7 +6,6 @@ export const MOCK_EVENTS: Event[] = [
     location: { lat: 21.0285, lon: 105.8542 },
     type: "riot",
     severity: 0.9,
-    risk_score: 80,
     timestamp: Date.now()
   },
   {
@@ -14,7 +13,6 @@ export const MOCK_EVENTS: Event[] = [
     location: { lat: 10.7769, lon: 106.7009 },
     type: "crime",
     severity: 0.6,
-    risk_score: 55,
     timestamp: Date.now()
   },
   {
@@ -22,7 +20,27 @@ export const MOCK_EVENTS: Event[] = [
     location: { lat: 16.0544, lon: 108.2022 },
     type: "weather",
     severity: 0.4,
-    risk_score: 30,
+    timestamp: Date.now()
+  },
+  {
+    id: "4",
+    location: { lat: 35.6762, lon: 139.6503 },
+    type: "weather",
+    severity: 0.1,
+    timestamp: Date.now()
+  },
+  {
+    id: "5",
+    location: { lat: 48.8566, lon: 2.3522 },
+    type: "crime",
+    severity: 0.5,
+    timestamp: Date.now()
+  },
+  {
+    id: "6",
+    location: { lat: 34.5553, lon: 69.2075 },
+    type: "riot",
+    severity: 0.9,
     timestamp: Date.now()
   }
 ];
