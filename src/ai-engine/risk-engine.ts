@@ -7,7 +7,6 @@ export function calculateRiskScore(severity: number, distance: number): number {
   
   return Math.round(finalScore);
 }
-<<<<<<< HEAD
 /**  
  *1. Hàm tính điểm Fallback (Rule-based)
  * Dùng khi AI bị lỗi hoặc Timeout, đảm bảo luôn có kết quả cho demo 
@@ -48,8 +47,7 @@ export function calculateRiskScore(severity: number, distance: number): number {
         scoring_source: 'ai',
         scoring_status: 'ok'
     };
-} catch (err : any ) {
-    const error = err as Error; // Ep kieu ve Error chuan 
+} catch (error) {
     // Tu dong kich hoat Fallback khi co loi 
     const fallbackScore = calculateFallbackScore(eventData.type, eventData.severity);
     console.warn(`[AI_ENGINE] Chế độ Fallback được kích hoạt: ${error.message}`);
@@ -61,21 +59,6 @@ export function calculateRiskScore(severity: number, distance: number): number {
     };
 }
  }
-/*
- * AI Engineer xác nhận Mapping 
- * Đảm bảo cùng một score sẽ ra cùng một màu trên toàn hệ thống
- */
-export function getRiskLevel(score: number) {
-    if (score > 70) {
-        return { level: 'Nguy hiểm', color: 'Red', hex: '#e74c3c' }; // Nguy hiểm > 70
-    }
-    if (score >= 30) {
-        return { level: 'Cảnh báo', color: 'Yellow', hex: '#f1c40f' }; // Cảnh báo 30-70
-    }
-    return { level: 'An toàn', color: 'Green', hex: '#2ecc71' }; // An toàn < 30
-}
-=======
 // AI Engineer: Use canonical getRiskLevel from shared/risk-score-spec.js
 // Ensures consistent mapping: 'green' | 'yellow' | 'red' across the system
 export { getRiskLevel } from '../../shared/risk-score-spec.js';
->>>>>>> upstream/main
