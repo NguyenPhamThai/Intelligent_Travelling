@@ -1,28 +1,31 @@
 /**
  * API Endpoint: GET /api/events
- * (with cache key canonicalization + stale-data guardrails)
- *
- * Returns risk events (weather, crime, riots, etc.) within a specified geographic radius.
+ * Returns risk events (weather, crime, riots, disaster) within a specified geographic radius.
  *
  * Query Parameters:
  *   - lat (required): Latitude of center point (-90 to 90)
  *   - lon (required): Longitude of center point (-180 to 180)
  *   - radius (optional, default: 50): Search radius in kilometers
+ *   - page (optional, default: 1): Page number for pagination
+ *   - page_size (optional, default: 20, max: 100): Items per page
+ *   - sort (optional, default: occurred_at:desc): Sort order (occurred_at, risk_score)
  *
- * Response: { events: Event[], total: number, query: {...}, timestamp: number, _freshness: {...} }
+ * Response: {
+ *   events: Event[],
+ *   total: number,
+ *   page: number,
+ *   page_size: number,
+ *   has_next: boolean,
+ *   query: {...},
+ *   timestamp: number
+ * }
  *
- * Cache Key: Canonical, order-invariant, normalized lat/lon to 4 decimals
- * TTL Policy: hot(5m) for <24h, warm(30m) for 7d, cold(1h) for all
- * Stale Guard: freshness metadata + stale-while-revalidate policy
- *
- * Example:
- *   GET /api/events?lat=25.7617&lon=-80.1918&radius=100
+ * Cache key is canonicalized by lat/lon, radius, page, page_size, sort, and query filters.
  */
 
 import { getCorsHeaders } from './_cors.js';
 import { jsonResponse } from './_json-response.js';
 import { calculateRiskScore, getRiskLevel } from '../shared/risk-score.js';
-import { readJsonFromUpstash, writeJsonToUpstash } from './_upstash-json.js';
 
 // Cache key canonicalization
 export function buildCanonicalCacheKey(params) {
@@ -45,6 +48,7 @@ export function buildCanonicalCacheKey(params) {
     `radius:${radius}`,
     `page:${page}`,
     `page_size:${page_size}`,
+    `sort:${params.sort || 'occurred_at:desc'}`,
     `time_range:${time_range}`,
     `category:${category}`,
     `risk_level:${risk_level}`,
@@ -105,6 +109,20 @@ export function addFreshnessMetadata(data, generatedAt) {
   };
 }
 
+const DEFAULT_PAGE = 1;
+const DEFAULT_PAGE_SIZE = 20;
+const MAX_PAGE_SIZE = 100;
+const MAX_RADIUS_KM = 10000;
+const CACHE_TTL_SECONDS = 30;
+const REDIS_READ_TIMEOUT_MS = 3000;
+const REDIS_SET_TIMEOUT_MS = 3000;
+const inMemoryCache = new Map();
+
+const SORT_FIELD_MAP = {
+  occurred_at: 'timestamp',
+  risk_score: 'risk_score',
+};
+
 const MOCK_EVENTS = [
   // RED (score > 70): High severity
   {
@@ -164,29 +182,43 @@ function haversineDistance(lat1, lon1, lat2, lon2) {
   const dLon = toRad(lon2 - lon1);
   const a =
     Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lon1)) * Math.sin(dLon / 2) ** 2;
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   const earthRadiusKm = 6371;
   return earthRadiusKm * c;
 }
 
-function getEventsInRadius(lat, lon, radiusKm) {
-  return MOCK_EVENTS.map((event) => ({
-    event,
-    distance: haversineDistance(lat, lon, event.location.lat, event.location.lon),
-  }))
-    .filter((entry) => entry.distance <= radiusKm)
-    .map((entry) => {
-      const riskScore = calculateRiskScore(entry.event);
-      return {
-        ...entry.event,
-        risk_score: riskScore,
-        source: 'shared_scorer',
-        fallback_used: false,
-        threshold: getRiskLevel(riskScore),
-      };
-    })
-    .sort((a, b) => (b.risk_score ?? 0) - (a.risk_score ?? 0));
+
+function parseSortParam(rawSort) {
+  const defaultSort = { field: 'timestamp', name: 'occurred_at', order: 'desc', descriptor: 'occurred_at:desc' };
+  if (!rawSort || !rawSort.trim()) return defaultSort;
+
+  let sortValue = rawSort.trim();
+  let order = 'desc';
+  if (sortValue.startsWith('-')) {
+    order = 'desc';
+    sortValue = sortValue.slice(1);
+  } else if (sortValue.startsWith('+')) {
+    order = 'asc';
+    sortValue = sortValue.slice(1);
+  }
+
+  const parts = sortValue.split(':').map((part) => part.trim().toLowerCase()).filter(Boolean);
+  const field = parts[0] ?? '';
+  if (parts[1] === 'asc' || parts[1] === 'desc') {
+    order = parts[1];
+  }
+
+  if (!Object.prototype.hasOwnProperty.call(SORT_FIELD_MAP, field)) {
+    return defaultSort;
+  }
+
+  return {
+    field: SORT_FIELD_MAP[field],
+    name: field,
+    order,
+    descriptor: `${field}:${order}`,
+  };
 }
 
 function validateCoordinates(lat, lon) {
@@ -206,6 +238,117 @@ function validateCoordinates(lat, lon) {
   return { valid: true };
 }
 
+function enforceEventContract(event) {
+  return {
+    id: typeof event.id === 'string' ? event.id : '',
+    title: typeof event.title === 'string' ? event.title : '',
+    location: {
+      lat: typeof event.location?.lat === 'number' ? event.location.lat : 0,
+      lon: typeof event.location?.lon === 'number' ? event.location.lon : 0,
+    },
+    type: typeof event.type === 'string' ? event.type : 'unknown',
+    severity: Number.isFinite(event.severity) ? event.severity : 0,
+    timestamp: Number.isFinite(event.timestamp) ? event.timestamp : 0,
+    risk_score: Number.isFinite(event.risk_score) ? event.risk_score : 0,
+    source: typeof event.source === 'string' ? event.source : 'shared_scorer',
+    fallback_used: typeof event.fallback_used === 'boolean' ? event.fallback_used : false,
+    threshold: typeof event.threshold === 'string' ? event.threshold : 'unknown',
+  };
+}
+
+function applySort(events, sort) {
+  const direction = sort.order === 'asc' ? 1 : -1;
+  return [...events].sort((a, b) => {
+    const aValue = a[sort.field];
+    const bValue = b[sort.field];
+
+    if (aValue === bValue) {
+      return a.id.localeCompare(b.id);
+    }
+
+    if (typeof aValue === 'number' && typeof bValue === 'number') {
+      return (aValue - bValue) * direction;
+    }
+
+    return String(aValue).localeCompare(String(bValue)) * direction;
+  });
+}
+
+function getEventsInRadius(lat, lon, radiusKm) {
+  return MOCK_EVENTS.map((event) => ({
+    event,
+    distance: haversineDistance(lat, lon, event.location.lat, event.location.lon),
+  }))
+    .filter((entry) => entry.distance <= radiusKm)
+    .map((entry) => {
+      const riskScore = calculateRiskScore(entry.event);
+      return enforceEventContract({
+        ...entry.event,
+        risk_score: riskScore,
+        source: 'shared_scorer',
+        fallback_used: false,
+        threshold: getRiskLevel(riskScore),
+      });
+    });
+}
+
+async function readCache(cacheKey) {
+  const redisUrl = process.env.UPSTASH_REDIS_REST_URL;
+  const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN;
+  if (!redisUrl || !redisToken) {
+    return null;
+  }
+
+  try {
+    const response = await fetch(`${redisUrl}/get/${encodeURIComponent(cacheKey)}`, {
+      method: 'GET',
+      headers: { Authorization: `Bearer ${redisToken}` },
+      signal: AbortSignal.timeout(REDIS_READ_TIMEOUT_MS),
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const payload = await response.json();
+    if (!payload?.result) {
+      return null;
+    }
+
+    return JSON.parse(payload.result);
+  } catch {
+    return null;
+  }
+}
+
+async function writeCache(cacheKey, payload) {
+  const redisUrl = process.env.UPSTASH_REDIS_REST_URL;
+  const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN;
+  if (!redisUrl || !redisToken) {
+    return false;
+  }
+
+  try {
+    const encoded = encodeURIComponent(JSON.stringify(payload));
+    const response = await fetch(
+      `${redisUrl}/set/${encodeURIComponent(cacheKey)}/${encoded}/EX/${CACHE_TTL_SECONDS}`,
+      {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${redisToken}` },
+        signal: AbortSignal.timeout(REDIS_SET_TIMEOUT_MS),
+      }
+    );
+
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
+export function _clearEventsInMemoryCache() {
+  inMemoryCache.clear();
+}
+
 export const config = { runtime: 'edge' };
 
 export default async function handler(request) {
@@ -223,6 +366,9 @@ export default async function handler(request) {
   const latParam = url.searchParams.get('lat');
   const lonParam = url.searchParams.get('lon');
   const radiusParam = url.searchParams.get('radius');
+  const pageParam = url.searchParams.get('page');
+  const pageSizeParam = url.searchParams.get('page_size');
+  const sortParam = url.searchParams.get('sort');
 
   if (!latParam || !lonParam) {
     return jsonResponse({ error: 'Missing required parameters: lat and lon' }, 400, corsHeaders);
@@ -239,7 +385,7 @@ export default async function handler(request) {
 
   if (radiusParam && radiusParam.trim() !== '') {
     const radiusNum = toNumber(radiusParam);
-    if (Number.isNaN(radiusNum) || radiusNum <= 0 || radiusNum > 10000) {
+    if (Number.isNaN(radiusNum) || radiusNum <= 0 || radiusNum > MAX_RADIUS_KM) {
       return jsonResponse(
         { error: 'Invalid radius: must be a number between 0 and 10000 km' },
         400,
@@ -249,63 +395,78 @@ export default async function handler(request) {
     radiusKm = radiusNum;
   }
 
-  // Parse additional query params that affect results
-  const pageParam = url.searchParams.get('page');
-  const pageSizeParam = url.searchParams.get('page_size') || url.searchParams.get('pageSize');
-  const timeRangeParam = url.searchParams.get('time_range') || url.searchParams.get('timeRange');
-  const categoryParam = url.searchParams.get('category');
-  const riskLevelParam = url.searchParams.get('risk_level') || url.searchParams.get('riskLevel');
+  const page = pageParam ? toNumber(pageParam) : DEFAULT_PAGE;
+  const pageSize = pageSizeParam ? toNumber(pageSizeParam) : DEFAULT_PAGE_SIZE;
 
-  const page = Number.isFinite(Number(pageParam)) ? Number(pageParam) : 1;
-  const page_size = Number.isFinite(Number(pageSizeParam)) ? Number(pageSizeParam) : 10;
-  const time_range = timeRangeParam || 'all';
-  const category = categoryParam || 'all';
-  const risk_level = riskLevelParam || 'all';
+  if (Number.isNaN(page) || page < 1 || !Number.isInteger(page)) {
+    return jsonResponse({ error: 'Invalid page: must be an integer >= 1' }, 400, corsHeaders);
+  }
 
-  const params = { lat, lon, radius: radiusKm, page, page_size, time_range, category, risk_level };
-  const cacheKey = buildCanonicalCacheKey(params);
-  const ttl = getTTLForQuery(params.time_range || 'all');
+  if (Number.isNaN(pageSize) || pageSize < 1 || pageSize > MAX_PAGE_SIZE || !Number.isInteger(pageSize)) {
+    return jsonResponse(
+      { error: `Invalid page_size: must be an integer between 1 and ${MAX_PAGE_SIZE}` },
+      400,
+      corsHeaders
+    );
+  }
 
-  // Check cache
-  try {
-    const cached = await readJsonFromUpstash(cacheKey);
-    if (cached && cached._freshness) {
-      const age = Date.now() - cached._freshness.generated_at;
-      if (age < cached._freshness.max_age_seconds * 1000) {
-        // Fresh
-        return jsonResponse(cached, 200, corsHeaders);
-      } else {
-        // Stale - return with stale flag (stale-while-revalidate)
-        cached._freshness.is_stale = true;
-        return jsonResponse(cached, 200, corsHeaders);
-      }
+  const sort = parseSortParam(sortParam);
+  const cacheKey = buildCanonicalCacheKey({
+    lat,
+    lon,
+    radius: radiusKm,
+    page,
+    page_size: pageSize,
+    sort: sort.descriptor,
+  });
+  let serializedResponse = null;
+  let cacheStatus = 'MISS';
+  let redisAvailable = Boolean(process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN);
+
+  if (redisAvailable) {
+    serializedResponse = await readCache(cacheKey);
+    if (serializedResponse) {
+      cacheStatus = 'HIT';
     }
-  } catch (error) {
-    console.warn('Cache read failed:', error.message);
   }
 
-  // Compute fresh data
-  const events = getEventsInRadius(lat, lon, radiusKm);
-  const responseData = {
-    events,
-    total: events.length,
-    query: { lat, lon, radius_km: radiusKm, page, page_size, time_range, category, risk_level },
-    timestamp: Date.now(),
-  };
-
-  const freshData = addFreshnessMetadata(responseData, Date.now());
-
-  // Cache the fresh data: write to Upstash (non-blocking)
-  try {
-    // write main cache entry with TTL
-    writeJsonToUpstash(cacheKey, freshData, ttl).catch((err) => console.warn('Cache write failed:', err.message));
-    // write seed-meta for freshness tracking (longer TTL)
-    const seedMetaKey = `seed-meta:${cacheKey}`;
-    const seedMeta = { fetchedAt: Date.now(), recordCount: events.length };
-    writeJsonToUpstash(seedMetaKey, seedMeta, Math.max(60, ttl * 2)).catch((err) => console.warn('Seed-meta write failed:', err.message));
-  } catch (err) {
-    console.warn('Cache pipeline error:', err.message);
+  if (!serializedResponse && inMemoryCache.has(cacheKey)) {
+    serializedResponse = inMemoryCache.get(cacheKey);
+    cacheStatus = 'HIT';
+    redisAvailable = false;
   }
 
-  return jsonResponse(freshData, 200, corsHeaders);
+  if (!serializedResponse) {
+    const allEvents = getEventsInRadius(lat, lon, radiusKm);
+    const sortedEvents = applySort(allEvents, sort);
+    const total = sortedEvents.length;
+    const startIndex = (page - 1) * pageSize;
+    const pageItems = sortedEvents.slice(startIndex, startIndex + pageSize);
+
+    serializedResponse = {
+      events: pageItems,
+      total,
+      page,
+      page_size: pageSize,
+      has_next: startIndex + pageSize < total,
+      query: { lat, lon, radius_km: radiusKm, sort: sort.descriptor },
+      timestamp: Date.now(),
+    };
+
+    if (redisAvailable) {
+      const writeSucceeded = await writeCache(cacheKey, serializedResponse);
+      if (!writeSucceeded) {
+        cacheStatus = 'BYPASS';
+        inMemoryCache.set(cacheKey, serializedResponse);
+      }
+    } else {
+      cacheStatus = cacheStatus === 'HIT' ? 'HIT' : 'BYPASS';
+      inMemoryCache.set(cacheKey, serializedResponse);
+    }
+  }
+
+  return jsonResponse(serializedResponse, 200, {
+    ...corsHeaders,
+    'X-Cache': cacheStatus,
+  });
 }
