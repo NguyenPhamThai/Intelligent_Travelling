@@ -1,0 +1,102 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Filter UI Demo</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <style>
+      body{font-family:Arial,Helvetica,sans-serif;padding:18px}
+      .controls{display:flex;gap:12px;align-items:center;margin-bottom:12px}
+      .badge{display:inline-block;padding:4px 8px;border-radius:12px;color:#fff;font-weight:600}
+      .event{border-bottom:1px solid #eee;padding:8px 0}
+      .empty{color:#666;margin-top:12px}
+    </style>
+  </head>
+  <body>
+    <h3>Events Filter (Demo)</h3>
+    <div class="controls">
+      <div>
+        <label><input type="checkbox" name="type" value="weather" checked/> weather</label>
+        <label><input type="checkbox" name="type" value="crime" checked/> crime</label>
+        <label><input type="checkbox" name="type" value="riot" checked/> riot</label>
+        <label><input type="checkbox" name="type" value="news" checked/> news</label>
+        <label><input type="checkbox" name="type" value="traffic" checked/> traffic</label>
+        <label><input type="checkbox" name="type" value="unknown"/> unknown</label>
+      </div>
+      <div>
+        <label>min risk: <input id="minRisk" type="number" min="0" max="100" value="0"/></label>
+        <label>max risk: <input id="maxRisk" type="number" min="0" max="100" value="100"/></label>
+      </div>
+      <div>
+        <button id="apply">Apply Filters</button>
+      </div>
+    </div>
+
+    <div id="results"></div>
+
+    <script>
+      async function loadMapping(){
+        try{
+          const r = await fetch('/ai/risk_color_mapping.json');
+          if(!r.ok) return null;
+          return r.json();
+        }catch(e){return null}
+      }
+
+      function pickColor(mapping, score){
+        if(!mapping || !mapping.bands) return '#999';
+        for(const b of mapping.bands){
+          if(score >= b.min && score <= b.max) return b.color;
+        }
+        return '#999';
+      }
+
+      async function fetchEvents(types, min, max){
+        const params = new URLSearchParams();
+        if(types && types.length) params.set('type', types.join(','));
+        if(min !== null) params.set('min_risk', String(min));
+        if(max !== null) params.set('max_risk', String(max));
+        const url = '/events?' + params.toString();
+        const r = await fetch(url);
+        if(!r.ok) throw new Error('API error ' + r.status);
+        return r.json();
+      }
+
+      (async function init(){
+        const mapping = await loadMapping();
+        const apply = document.getElementById('apply');
+        const results = document.getElementById('results');
+
+        async function run(){
+          const checked = Array.from(document.querySelectorAll('input[name="type"]:checked')).map(n=>n.value);
+          let min = Number(document.getElementById('minRisk').value);
+          let max = Number(document.getElementById('maxRisk').value);
+          if(Number.isNaN(min)) min = null;
+          if(Number.isNaN(max)) max = null;
+          try{
+            const ev = await fetchEvents(checked, min, max);
+            results.innerHTML = '';
+            if(!ev || ev.length === 0){
+              results.innerHTML = '<div class="empty">No events</div>';
+              return;
+            }
+            for(const e of ev){
+              const color = pickColor(mapping, typeof e.risk_score === 'number' ? e.risk_score : -1);
+              const el = document.createElement('div');
+              el.className = 'event';
+              const loc = (e.location && typeof e.location.lat === 'number' && typeof e.location.lon === 'number') ? `(${e.location.lat.toFixed(3)}, ${e.location.lon.toFixed(3)})` : '(unknown location)';
+              el.innerHTML = `<div><strong>${e.type}</strong> ${loc} <span class="badge" style="background:${color}">${e.risk_score}</span></div><div style="font-size:12px;color:#666">id: ${e.id} • ts: ${e.timestamp}</div>`;
+              results.appendChild(el);
+            }
+          }catch(err){
+            results.innerHTML = `<div class="empty">Error: ${err.message}</div>`;
+          }
+        }
+
+        apply.addEventListener('click', run);
+        // initial run
+        run();
+      })();
+    </script>
+  </body>
+</html>

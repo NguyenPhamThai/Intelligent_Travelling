@@ -84,6 +84,8 @@ export function hasRequiredScoreFields(event) {
   return (
     !!event &&
     typeof event === 'object' &&
+    typeof event.id === 'string' &&
+    event.id.trim().length > 0 &&
     typeof event.type === 'string' &&
     ['riot', 'crime', 'weather'].includes(event.type) &&
     typeof event.severity === 'number' &&

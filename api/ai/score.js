@@ -4,8 +4,11 @@ import {
   getRiskLevel,
   hasRequiredScoreFields,
 } from '../../shared/risk-score-spec.js';
+import { incrementMetric } from '../_metrics.js';
 
 const MODEL_TIMEOUT_MS = 2500;
+// Rule-based fallback version for auditing
+const FALLBACK_VERSION = 'rb-v1';
 
 async function scoreWithAiModel(event) {
   const modelUrl = process.env.AI_SCORE_MODEL_URL;
@@ -73,10 +76,18 @@ export default async function handler(req, res) {
   }
 
   const safeScore = clampRiskScore(risk_score);
+  // Emit metric for fallback usage
+  try {
+    if (fallback_used) incrementMetric('ai.fallback_used');
+  } catch (e) {
+    console.warn('Metric increment failed', e.message);
+  }
+
   res.status(200).json({
     risk_score: safeScore,
     source,
     fallback_used,
     threshold: getRiskLevel(safeScore),
+    fallback_version: FALLBACK_VERSION,
   });
 }

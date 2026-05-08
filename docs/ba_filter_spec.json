@@ -1,0 +1,25 @@
+{
+  "filter_spec_version": "1.0",
+  "event_model": {
+    "id": "string",
+    "location": {"lat": "number", "lon": "number"},
+    "type": "string",
+    "risk_score": "number (0-100)",
+    "timestamp": "number (unix ms)"
+  },
+  "allowed_types": ["weather", "crime", "riot", "news", "traffic", "unknown"],
+  "risk_score_bands": [
+    {"name": "low", "min": 0, "max": 30},
+    {"name": "medium", "min": 31, "max": 60},
+    {"name": "high", "min": 61, "max": 100}
+  ],
+  "acceptance_criteria": [
+    "Filter UI allows selecting one or more `type` values",
+    "Filter UI allows selecting `min_risk` and `max_risk` numeric range",
+    "API supports `GET /events?type=&min_risk=&max_risk=` and returns events matching filters",
+    "API returns empty array `[]` when no events match",
+    "Invalid query params return HTTP 400 with JSON error",
+    "UI shows `No events` state with no console errors when dataset empty or fields missing",
+    "Risk bands are as specified and used by AI mapping"
+  ]
+}
