@@ -84,7 +84,7 @@
               const color = pickColor(mapping, typeof e.risk_score === 'number' ? e.risk_score : -1);
               const el = document.createElement('div');
               el.className = 'event';
-              const loc = (e.location && typeof e.location.lat === 'number' && typeof e.location.lon === 'number') ? `(${e.location.lat.toFixed(3)}, ${e.location.lon.toFixed(3)})` : '(unknown location)';
+              const loc = (e.location && typeof e.location.lat === 'number' && typeof e.location.lng === 'number') ? `(${e.location.lat.toFixed(3)}, ${e.location.lng.toFixed(3)})` : '(unknown location)';
               el.innerHTML = `<div><strong>${e.type}</strong> ${loc} <span class="badge" style="background:${color}">${e.risk_score}</span></div><div style="font-size:12px;color:#666">id: ${e.id} • ts: ${e.timestamp}</div>`;
               results.appendChild(el);
             }

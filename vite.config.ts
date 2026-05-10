@@ -252,7 +252,7 @@ function eventsPlugin(): Plugin {
           const events = MOCK_EVENTS
             .map((event) => ({
               event,
-              distance: haversineDistance(latNum, lonNum, event.location.lat, event.location.lon),
+              distance: haversineDistance(latNum, lonNum, event.location.lat, event.location.lng),
             }))
             .filter((entry) => entry.distance <= radiusKm)
             .sort((a, b) => a.distance - b.distance)

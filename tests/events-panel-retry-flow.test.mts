@@ -28,6 +28,11 @@ describe('EventsPanel retry flow', () => {
               timestamp: 1775952000000,
             },
           ],
+          total: 1,
+          has_next: false,
+          page: 1,
+          page_size: 10,
+          query: { sort: 'risk_score:desc' },
         }),
         {
           status: 200,

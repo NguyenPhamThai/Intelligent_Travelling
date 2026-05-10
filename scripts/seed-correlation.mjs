@@ -449,7 +449,7 @@ function collectDisasterSignals(earthquakes, outages, protests) {
       source: 'usgs',
       severity,
       lat: q.location.latitude,
-      lon: q.location.longitude,
+      lng: q.location.longitude,
       timestamp: ts,
       label: `M${q.magnitude.toFixed(1)} \u2014 ${q.place}`,
       magnitude: q.magnitude,

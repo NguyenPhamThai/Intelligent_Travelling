@@ -63,7 +63,7 @@ describe('/api/ai/score contract', () => {
     assert.ok(Array.isArray(res.payload.required));
   });
 
-  it('falls back to shared scorer when AI service fails', async () => {
+  it('falls back to rule_based scorer when AI service fails', async () => {
     process.env.AI_SCORE_MODEL_URL = 'https://ai.example/score';
     globalThis.fetch = async () => {
       throw new Error('model unavailable');
@@ -76,7 +76,7 @@ describe('/api/ai/score contract', () => {
 
     assert.equal(res.statusCode, 200);
     assert.equal(res.payload.fallback_used, true);
-    assert.equal(res.payload.source, 'shared_scorer');
+    assert.equal(res.payload.source, 'rule_based');
     assert.equal(typeof res.payload.fallback_version, 'string');
     assert.equal(typeof res.payload.risk_score, 'number');
     assert.ok(Number.isFinite(res.payload.risk_score));
@@ -98,7 +98,7 @@ describe('/api/ai/score contract', () => {
 
     assert.equal(res.statusCode, 200);
     assert.equal(res.payload.fallback_used, true);
-    assert.equal(res.payload.source, 'shared_scorer');
+    assert.equal(res.payload.source, 'rule_based');
     assert.equal(typeof res.payload.fallback_version, 'string');
     assert.ok(typeof res.payload.risk_score === 'number');
     assert.ok(res.payload.risk_score >= 0 && res.payload.risk_score <= 100);
@@ -119,7 +119,7 @@ describe('/api/ai/score contract', () => {
 
     assert.equal(res.statusCode, 200);
     assert.equal(res.payload.fallback_used, true);
-    assert.equal(res.payload.source, 'shared_scorer');
+    assert.equal(res.payload.source, 'rule_based');
     assert.equal(typeof res.payload.fallback_version, 'string');
     assert.ok(res.payload.risk_score >= 0 && res.payload.risk_score <= 100);
   });
@@ -139,8 +139,26 @@ describe('/api/ai/score contract', () => {
 
     assert.equal(res.statusCode, 200);
     assert.equal(res.payload.fallback_used, false);
-    assert.equal(res.payload.source, 'ai_model');
+    assert.equal(res.payload.source, 'ai');
     assert.equal(res.payload.risk_score, 88);
     assert.equal(typeof res.payload.fallback_version, 'string');
+  });
+
+  it('supports safe-mode forcing rule_based scoring', async () => {
+    process.env.FORCE_RULE_BASED_SCORING = '1';
+    process.env.AI_SCORE_MODEL_URL = 'https://ai.example/score';
+    globalThis.fetch = async () => {
+      throw new Error('should not be called when force fallback is enabled');
+    };
+
+    const req = { method: 'POST', body: makeEvent() };
+    const res = createRes();
+
+    await handler(req, res);
+
+    assert.equal(res.statusCode, 200);
+    assert.equal(res.payload.fallback_used, true);
+    assert.equal(res.payload.source, 'rule_based');
+    assert.ok(res.payload.risk_score >= 0 && res.payload.risk_score <= 100);
   });
 });

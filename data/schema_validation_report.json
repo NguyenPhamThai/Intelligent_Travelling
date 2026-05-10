@@ -11,7 +11,7 @@
     "unknown": 1
   },
   "notes": [
-    "All records include required fields: id, location.lat, location.lon, type, risk_score, timestamp",
+    "All records include required fields: id, location.lat, location.lng, type, risk_score, timestamp",
     "risk_score values are within 0-100",
     "Timestamps are numeric (one record uses 0 to simulate an upstream missing timestamp fallback)",
     "Record evt-0035 uses 'unknown' type to represent missing optional upstream type; fallback rule applies"

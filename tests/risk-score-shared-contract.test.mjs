@@ -42,7 +42,7 @@ describe('shared risk scorer contract across endpoints', () => {
 
     const eventFromEventsApi = eventsPayload.events[0];
     assert.equal(typeof eventFromEventsApi.risk_score, 'number');
-    assert.equal(eventFromEventsApi.source, 'shared_scorer');
+    assert.equal(eventFromEventsApi.source, 'rule_based');
     assert.equal(eventFromEventsApi.fallback_used, false);
     assert.ok(['green', 'yellow', 'red'].includes(eventFromEventsApi.threshold));
 
@@ -57,7 +57,7 @@ describe('shared risk scorer contract across endpoints', () => {
 
     assert.equal(aiRes.statusCode, 200);
     assert.equal(typeof aiRes.payload.risk_score, 'number');
-    assert.equal(aiRes.payload.source, 'shared_scorer');
+    assert.equal(aiRes.payload.source, 'rule_based');
     assert.equal(aiRes.payload.fallback_used, true);
     assert.ok(['green', 'yellow', 'red'].includes(aiRes.payload.threshold));
 

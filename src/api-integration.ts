@@ -16,13 +16,21 @@ import { MOCK_EVENTS, getMockEventsInRadius, getHighSeverityEvents } from './moc
 export async function fetchEventsNearUser(
   latitude: number,
   longitude: number,
-  radiusKm: number = 50
+  radiusKm: number = 50,
+  options: {
+    page?: number
+    page_size?: number
+    sort?: 'risk_score:desc' | 'risk_score:asc' | 'occurred_at:desc' | 'occurred_at:asc'
+  } = {}
 ): Promise<EventsResponse> {
   try {
     const params = new URLSearchParams({
       lat: latitude.toString(),
       lon: longitude.toString(),
       radius: radiusKm.toString(),
+      page: String(options.page ?? 1),
+      page_size: String(options.page_size ?? 10),
+      sort: options.sort ?? 'risk_score:desc',
     });
 
     const response = await fetch(`/api/events?${params}`, {

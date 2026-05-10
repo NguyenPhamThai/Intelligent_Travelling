@@ -4,7 +4,7 @@ import { calculateRiskScore, type RiskEvent } from '../../../shared/risk-score-s
 
 export function filterDistance(events: Event[], userLat: number, userLng: number, radiusKm: number): Event[] {
   return events.filter(event => {
-    const distance = getDistance(userLat, userLng, event.location.lat, event.location.lon);
+    const distance = getDistance(userLat, userLng, event.location.lat, event.location.lng);
     return distance <= radiusKm;
   });
 }

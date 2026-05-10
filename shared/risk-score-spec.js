@@ -17,7 +17,7 @@ export const UI_STATE_MAP = Object.freeze({
 export const EVENT_CONTRACT = Object.freeze({
   required: Object.freeze({
     id: 'string',
-    location: Object.freeze({ lat: 'number', lon: 'number' }),
+    location: Object.freeze({ lat: 'number', lng: 'number' }),
     type: 'riot|crime|weather',
     severity: 'number',
     timestamp: 'number',
@@ -42,25 +42,48 @@ export const RISK_SCORE_SPEC = Object.freeze({
       required: EVENT_CONTRACT.required,
     },
     output: {
-      risk_score: 'number',
-      source: 'string',
+      // Core response fields
+      risk_score: 'number (0-100)',
+      source: 'string (ai|rule_based)',
+      score_source: 'string (ai|rule_based, alias for source)',
       fallback_used: 'boolean',
+      fallback_reason: 'string|undefined (forced_by_env|model_timeout|model_http_error|model_unavailable|invalid_score|ai_unavailable)',
       threshold: 'green|yellow|red',
+      // Metadata
+      fallback_version: 'string (version identifier)',
+    },
+    responseHeaders: {
+      'X-Cache': 'HIT|MISS|BYPASS',
+      'X-Score-Source': 'ai|rule_based|mixed',
+      'X-Fallback-Count': 'number (count of fallback-scored events)',
+      'X-AI-Score-Count': 'number (count of AI-scored events)',
     },
   },
   examples: {
     request: {
       id: 'evt_20260412_001',
-      location: { lat: 10.7769, lon: 106.7009 },
+      location: { lat: 10.7769, lng: 106.7009 },
       type: 'riot',
       severity: 0.72,
       timestamp: 1775952000000,
     },
     response: {
       risk_score: 72,
-      source: 'heuristic_v0',
+      source: 'ai',
+      score_source: 'ai',
       fallback_used: false,
+      fallback_reason: undefined,
       threshold: 'red',
+      fallback_version: 'rb-v1',
+    },
+    responseWithFallback: {
+      risk_score: 60,
+      source: 'rule_based',
+      score_source: 'rule_based',
+      fallback_used: true,
+      fallback_reason: 'model_timeout',
+      threshold: 'yellow',
+      fallback_version: 'rb-v1',
     },
   },
 });
@@ -72,7 +95,7 @@ export function isFullEvent(event) {
     typeof event.id === 'string' &&
     typeof event.location === 'object' &&
     typeof event.location?.lat === 'number' &&
-    typeof event.location?.lon === 'number' &&
+    typeof event.location?.lng === 'number' &&
     typeof event.type === 'string' &&
     ['riot', 'crime', 'weather'].includes(event.type) &&
     typeof event.severity === 'number' &&
@@ -92,7 +115,7 @@ export function hasRequiredScoreFields(event) {
     Number.isFinite(event.severity) &&
     typeof event.location === 'object' &&
     Number.isFinite(event.location?.lat) &&
-    Number.isFinite(event.location?.lon) &&
+    Number.isFinite(event.location?.lng) &&
     typeof event.timestamp === 'number' &&
     Number.isFinite(event.timestamp)
   );

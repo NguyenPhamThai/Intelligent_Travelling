@@ -26,6 +26,17 @@
 import { getCorsHeaders } from './_cors.js';
 import { jsonResponse } from './_json-response.js';
 import { calculateRiskScore, getRiskLevel } from '../shared/risk-score.js';
+import { readJsonFromUpstash, writeJsonToUpstash } from './_upstash-json.js';
+
+const DEFAULT_PAGE = 1;
+const DEFAULT_PAGE_SIZE = 10;
+const MAX_PAGE_SIZE = 100;
+const DEFAULT_SORT = 'risk_score:desc';
+const CACHE_BYPASS_HEADER = 'BYPASS';
+const CACHE_HIT_HEADER = 'HIT';
+const CACHE_MISS_HEADER = 'MISS';
+
+const IN_MEMORY_CACHE = new Map();
 
 // Cache key canonicalization
 export function buildCanonicalCacheKey(params) {
@@ -40,6 +51,7 @@ export function buildCanonicalCacheKey(params) {
   const time_range = params.time_range || 'all';
   const category = params.category || 'all';
   const risk_level = params.risk_level || 'all';
+  const sort = parseSortParam(params.sort || DEFAULT_SORT).canonical;
 
   // Sort params alphabetically to ensure order-invariant
   const keyParts = [
@@ -52,6 +64,7 @@ export function buildCanonicalCacheKey(params) {
     `time_range:${time_range}`,
     `category:${category}`,
     `risk_level:${risk_level}`,
+    `sort:${sort}`,
   ].sort();
 
   // Namespace with version to allow safe invalidation/rolling upgrades
@@ -60,7 +73,7 @@ export function buildCanonicalCacheKey(params) {
 
 // Build Redis SCAN-friendly patterns for targeted invalidation.
 // Returns an array of glob patterns that can be supplied to `api/cache-purge.js`.
-export function buildCachePurgePatterns({ lat, lon, radius, time_range, category, risk_level } = {}) {
+export function buildCachePurgePatterns({ lat, lon, radius, time_range, category, risk_level, sort } = {}) {
   const parts = [];
   if (lat !== undefined) parts.push(`lat:${Math.round(lat * 10000) / 10000}`);
   if (lon !== undefined) parts.push(`lon:${Math.round(lon * 10000) / 10000}`);
@@ -68,12 +81,141 @@ export function buildCachePurgePatterns({ lat, lon, radius, time_range, category
   if (time_range !== undefined) parts.push(`time_range:${time_range}`);
   if (category !== undefined) parts.push(`category:${category}`);
   if (risk_level !== undefined) parts.push(`risk_level:${risk_level}`);
+  if (sort !== undefined) parts.push(`sort:${parseSortParam(sort).canonical}`);
 
   // Because keys are 'events:v1:' + sorted('|') joined parts, we match any key containing all parts in any order
   // by using wildcard before/after each part and combining into a single pattern.
   if (parts.length === 0) return [`events:v1:*`];
   const compound = parts.map(p => `*${p}*`).join('');
   return [`events:v1:${compound}`];
+}
+
+function parsePositiveInt(value, fallback) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  const intVal = Math.trunc(parsed);
+  if (intVal < 1) return fallback;
+  return intVal;
+}
+
+function normalizePageSize(value) {
+  const safeModeSize = parsePositiveInt(process.env.EVENTS_SAFE_PAGE_SIZE, 0);
+  if (safeModeSize > 0) {
+    return Math.min(safeModeSize, MAX_PAGE_SIZE);
+  }
+  return Math.min(parsePositiveInt(value, DEFAULT_PAGE_SIZE), MAX_PAGE_SIZE);
+}
+
+function parseSortParam(rawSort) {
+  const value = String(rawSort || DEFAULT_SORT).trim().toLowerCase();
+  const accepted = new Set(['risk_score', 'occurred_at']);
+
+  let field = 'risk_score';
+  let direction = 'desc';
+  if (value.startsWith('-')) {
+    field = value.slice(1);
+  } else if (value.includes(':')) {
+    const [f, d] = value.split(':', 2);
+    field = f;
+    direction = d === 'asc' ? 'asc' : 'desc';
+  } else if (value === 'risk_score' || value === 'occurred_at') {
+    field = value;
+  }
+
+  if (!accepted.has(field)) {
+    field = 'risk_score';
+    direction = 'desc';
+  }
+
+  return {
+    field,
+    direction,
+    canonical: `${field}:${direction}`,
+  };
+}
+
+function thresholdToRiskLevel(score) {
+  const threshold = getRiskLevel(score);
+  if (threshold === 'green') return 'low';
+  if (threshold === 'yellow') return 'medium';
+  return 'high';
+}
+
+function filterByTimeRange(events, timeRange) {
+  if (!timeRange || timeRange === 'all') return events;
+  const now = Date.now();
+  const windows = {
+    last_1h: 60 * 60 * 1000,
+    last_24h: 24 * 60 * 60 * 1000,
+    last_7d: 7 * 24 * 60 * 60 * 1000,
+  };
+  const maxAgeMs = windows[timeRange];
+  if (!maxAgeMs) return events;
+  return events.filter((event) => now - event.timestamp <= maxAgeMs);
+}
+
+function normalizeEvent(rawEvent) {
+  const risk_score = Number.isFinite(Number(rawEvent?.risk_score))
+    ? Number(rawEvent.risk_score)
+    : calculateRiskScore(rawEvent);
+  const safeType = ['riot', 'crime', 'weather'].includes(rawEvent?.type) ? rawEvent.type : 'weather';
+  const safeTimestamp = Number.isFinite(Number(rawEvent?.timestamp)) ? Number(rawEvent.timestamp) : Date.now();
+  const safeLat = Number.isFinite(Number(rawEvent?.location?.lat)) ? Number(rawEvent.location.lat) : 0;
+  const safeLng = Number.isFinite(Number(rawEvent?.location?.lng ?? rawEvent?.location?.lon)) ? Number(rawEvent.location.lng ?? rawEvent.location.lon) : 0;
+
+  // Determine score source and fallback reason
+  let score_source = 'rule_based';
+  let fallback_reason = undefined;
+  
+  if (typeof rawEvent?.source === 'string' && rawEvent.source === 'ai') {
+    score_source = 'ai';
+  } else if (rawEvent?.fallback_used === true) {
+    fallback_reason = rawEvent?.fallback_reason || 'ai_unavailable';
+  }
+
+  return {
+    id: typeof rawEvent?.id === 'string' && rawEvent.id ? rawEvent.id : `evt-default-${safeTimestamp}`,
+    title: typeof rawEvent?.title === 'string' && rawEvent.title ? rawEvent.title : 'Unknown event',
+    location: { lat: safeLat, lng: safeLon },
+    type: safeType,
+    severity: Number.isFinite(Number(rawEvent?.severity)) ? Number(rawEvent.severity) : 0,
+    timestamp: safeTimestamp,
+    risk_score: Number.isFinite(risk_score) ? Math.max(0, Math.min(100, risk_score)) : 0,
+    source: score_source,
+    fallback_used: typeof rawEvent?.fallback_used === 'boolean' ? rawEvent.fallback_used : false,
+    fallback_reason,
+    threshold: getRiskLevel(Math.max(0, Math.min(100, risk_score))),
+  };
+}
+
+function sortEventsDeterministic(events, sortSpec) {
+  const multiplier = sortSpec.direction === 'asc' ? 1 : -1;
+  return [...events].sort((a, b) => {
+    const primaryA = sortSpec.field === 'occurred_at' ? a.timestamp : a.risk_score;
+    const primaryB = sortSpec.field === 'occurred_at' ? b.timestamp : b.risk_score;
+    if (primaryA !== primaryB) return (primaryA - primaryB) * multiplier;
+
+    // Secondary + tertiary tie-breakers avoid pagination drift between requests.
+    if (a.timestamp !== b.timestamp) return b.timestamp - a.timestamp;
+    return String(a.id).localeCompare(String(b.id));
+  });
+}
+
+function getMemoryCache(key) {
+  const entry = IN_MEMORY_CACHE.get(key);
+  if (!entry) return null;
+  if (Date.now() > entry.expiresAt) {
+    IN_MEMORY_CACHE.delete(key);
+    return null;
+  }
+  return entry.value;
+}
+
+function setMemoryCache(key, value, ttlSeconds) {
+  IN_MEMORY_CACHE.set(key, {
+    value,
+    expiresAt: Date.now() + Math.max(1, ttlSeconds) * 1000,
+  });
 }
 
 // TTL policy matrix
@@ -188,37 +330,22 @@ function haversineDistance(lat1, lon1, lat2, lon2) {
   return earthRadiusKm * c;
 }
 
-
-function parseSortParam(rawSort) {
-  const defaultSort = { field: 'timestamp', name: 'occurred_at', order: 'desc', descriptor: 'occurred_at:desc' };
-  if (!rawSort || !rawSort.trim()) return defaultSort;
-
-  let sortValue = rawSort.trim();
-  let order = 'desc';
-  if (sortValue.startsWith('-')) {
-    order = 'desc';
-    sortValue = sortValue.slice(1);
-  } else if (sortValue.startsWith('+')) {
-    order = 'asc';
-    sortValue = sortValue.slice(1);
-  }
-
-  const parts = sortValue.split(':').map((part) => part.trim().toLowerCase()).filter(Boolean);
-  const field = parts[0] ?? '';
-  if (parts[1] === 'asc' || parts[1] === 'desc') {
-    order = parts[1];
-  }
-
-  if (!Object.prototype.hasOwnProperty.call(SORT_FIELD_MAP, field)) {
-    return defaultSort;
-  }
-
-  return {
-    field: SORT_FIELD_MAP[field],
-    name: field,
-    order,
-    descriptor: `${field}:${order}`,
-  };
+function getEventsInRadius(lat, lon, radiusKm) {
+  return MOCK_EVENTS.map((event) => ({
+    event,
+    distance: haversineDistance(lat, lon, event.location.lat, event.location.lng),
+  }))
+    .filter((entry) => entry.distance <= radiusKm)
+    .map((entry) => {
+      const riskScore = calculateRiskScore(entry.event);
+      return {
+        ...entry.event,
+        risk_score: riskScore,
+        source: 'rule_based',
+        fallback_used: false,
+        threshold: getRiskLevel(riskScore),
+      };
+    });
 }
 
 function validateCoordinates(lat, lon) {
@@ -395,78 +522,112 @@ export default async function handler(request) {
     radiusKm = radiusNum;
   }
 
-  const page = pageParam ? toNumber(pageParam) : DEFAULT_PAGE;
-  const pageSize = pageSizeParam ? toNumber(pageSizeParam) : DEFAULT_PAGE_SIZE;
+  // Parse additional query params that affect results
+  const pageParam = url.searchParams.get('page');
+  const pageSizeParam = url.searchParams.get('page_size') || url.searchParams.get('pageSize');
+  const timeRangeParam = url.searchParams.get('time_range') || url.searchParams.get('timeRange');
+  const categoryParam = url.searchParams.get('category');
+  const riskLevelParam = url.searchParams.get('risk_level') || url.searchParams.get('riskLevel');
+  const sortParam = url.searchParams.get('sort');
+  const cacheMode = (url.searchParams.get('cache') || '').toLowerCase();
+  const shouldBypassCache = cacheMode === 'off' || process.env.DISABLE_EVENTS_REDIS_CACHE === '1';
 
-  if (Number.isNaN(page) || page < 1 || !Number.isInteger(page)) {
-    return jsonResponse({ error: 'Invalid page: must be an integer >= 1' }, 400, corsHeaders);
-  }
+  const page = parsePositiveInt(pageParam, DEFAULT_PAGE);
+  const page_size = normalizePageSize(pageSizeParam);
+  const time_range = timeRangeParam || 'all';
+  const category = categoryParam || 'all';
+  const risk_level = riskLevelParam || 'all';
+  const sort = parseSortParam(sortParam).canonical;
 
-  if (Number.isNaN(pageSize) || pageSize < 1 || pageSize > MAX_PAGE_SIZE || !Number.isInteger(pageSize)) {
-    return jsonResponse(
-      { error: `Invalid page_size: must be an integer between 1 and ${MAX_PAGE_SIZE}` },
-      400,
-      corsHeaders
-    );
-  }
+  const params = { lat, lon, radius: radiusKm, page, page_size, time_range, category, risk_level, sort };
+  const cacheKey = buildCanonicalCacheKey(params);
+  const ttl = getTTLForQuery(params.time_range || 'all');
+  const baseHeaders = { ...corsHeaders };
+  let cacheDegraded = false;
 
-  const sort = parseSortParam(sortParam);
-  const cacheKey = buildCanonicalCacheKey({
-    lat,
-    lon,
-    radius: radiusKm,
-    page,
-    page_size: pageSize,
-    sort: sort.descriptor,
-  });
-  let serializedResponse = null;
-  let cacheStatus = 'MISS';
-  let redisAvailable = Boolean(process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN);
+  if (!shouldBypassCache) {
+    // Check Redis cache first.
+    try {
+      const cached = await readJsonFromUpstash(cacheKey);
+      if (cached && cached._freshness) {
+        const age = Date.now() - cached._freshness.generated_at;
+        const cacheHeaders = { ...baseHeaders, 'X-Cache': CACHE_HIT_HEADER };
+        if (age < cached._freshness.max_age_seconds * 1000) {
+          return jsonResponse(cached, 200, cacheHeaders);
+        }
 
-  if (redisAvailable) {
-    serializedResponse = await readCache(cacheKey);
-    if (serializedResponse) {
-      cacheStatus = 'HIT';
-    }
-  }
-
-  if (!serializedResponse && inMemoryCache.has(cacheKey)) {
-    serializedResponse = inMemoryCache.get(cacheKey);
-    cacheStatus = 'HIT';
-    redisAvailable = false;
-  }
-
-  if (!serializedResponse) {
-    const allEvents = getEventsInRadius(lat, lon, radiusKm);
-    const sortedEvents = applySort(allEvents, sort);
-    const total = sortedEvents.length;
-    const startIndex = (page - 1) * pageSize;
-    const pageItems = sortedEvents.slice(startIndex, startIndex + pageSize);
-
-    serializedResponse = {
-      events: pageItems,
-      total,
-      page,
-      page_size: pageSize,
-      has_next: startIndex + pageSize < total,
-      query: { lat, lon, radius_km: radiusKm, sort: sort.descriptor },
-      timestamp: Date.now(),
-    };
-
-    if (redisAvailable) {
-      const writeSucceeded = await writeCache(cacheKey, serializedResponse);
-      if (!writeSucceeded) {
-        cacheStatus = 'BYPASS';
-        inMemoryCache.set(cacheKey, serializedResponse);
+        // Stale-while-revalidate: keep serving with stale marker during incident windows.
+        cached._freshness.is_stale = true;
+        return jsonResponse(cached, 200, cacheHeaders);
       }
-    } else {
-      cacheStatus = cacheStatus === 'HIT' ? 'HIT' : 'BYPASS';
-      inMemoryCache.set(cacheKey, serializedResponse);
+    } catch (error) {
+      // Redis unavailable: fallback to in-memory cache to prevent API outage.
+      cacheDegraded = true;
+      const memoryCached = getMemoryCache(cacheKey);
+      if (memoryCached) {
+        return jsonResponse(memoryCached, 200, { ...baseHeaders, 'X-Cache': CACHE_BYPASS_HEADER });
+      }
+      console.warn('Cache read failed:', error.message);
     }
   }
 
-  return jsonResponse(serializedResponse, 200, {
-    ...corsHeaders,
-    'X-Cache': cacheStatus,
-  });
+  // Compute fresh data from canonical pipeline.
+  const rawEvents = getEventsInRadius(lat, lon, radiusKm).map(normalizeEvent);
+  const filteredByCategory = category === 'all'
+    ? rawEvents
+    : rawEvents.filter((event) => event.type === category);
+  const filteredByRisk = risk_level === 'all'
+    ? filteredByCategory
+    : filteredByCategory.filter((event) => thresholdToRiskLevel(event.risk_score) === risk_level);
+  const filteredByTime = filterByTimeRange(filteredByRisk, time_range);
+  const sortedEvents = sortEventsDeterministic(filteredByTime, parseSortParam(sort));
+
+  const total = sortedEvents.length;
+  const startIndex = (page - 1) * page_size;
+  const endIndex = startIndex + page_size;
+  const events = sortedEvents.slice(startIndex, endIndex);
+  const has_next = endIndex < total;
+
+  const responseData = {
+    events,
+    total,
+    has_next,
+    page,
+    page_size,
+    query: { lat, lon, radius_km: radiusKm, page, page_size, time_range, category, risk_level, sort },
+    timestamp: Date.now(),
+  };
+
+  const freshData = addFreshnessMetadata(responseData, Date.now());
+
+  // Compute metadata about response quality
+  const fallbackCount = freshData.events.filter((e) => e.fallback_used).length;
+  const aiCount = freshData.events.filter((e) => e.source === 'ai').length;
+  const responseHeaders = {
+    ...baseHeaders,
+    'X-Score-Source': fallbackCount > 0 ? 'mixed' : 'rule_based',
+    'X-Fallback-Count': String(fallbackCount),
+    'X-AI-Score-Count': String(aiCount),
+  };
+
+  if (!shouldBypassCache) {
+    // Cache fresh data to Redis. If Redis fails, fallback to in-memory.
+    try {
+      writeJsonToUpstash(cacheKey, freshData, ttl).catch((err) => {
+        setMemoryCache(cacheKey, freshData, ttl);
+        console.warn('Cache write failed:', err.message);
+      });
+
+      const seedMetaKey = `seed-meta:${cacheKey}`;
+      const seedMeta = { fetchedAt: Date.now(), recordCount: events.length };
+      writeJsonToUpstash(seedMetaKey, seedMeta, Math.max(60, ttl * 2)).catch((err) => console.warn('Seed-meta write failed:', err.message));
+      return jsonResponse(freshData, 200, { ...responseHeaders, 'X-Cache': cacheDegraded ? CACHE_BYPASS_HEADER : CACHE_MISS_HEADER });
+    } catch (err) {
+      setMemoryCache(cacheKey, freshData, ttl);
+      console.warn('Cache pipeline error:', err.message);
+      return jsonResponse(freshData, 200, { ...responseHeaders, 'X-Cache': CACHE_BYPASS_HEADER });
+    }
+  }
+
+  return jsonResponse(freshData, 200, { ...responseHeaders, 'X-Cache': CACHE_BYPASS_HEADER });
 }

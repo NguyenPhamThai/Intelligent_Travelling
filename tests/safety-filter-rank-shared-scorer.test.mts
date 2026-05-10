@@ -14,7 +14,7 @@ describe('safety filter-rank uses shared scorer', () => {
     };
 
     const expected = calculateRiskScore(event);
-    const scored = calculateRisk({ ...event }, event.location.lat, event.location.lon);
+    const scored = calculateRisk({ ...event }, event.location.lat, event.location.lng);
 
     assert.equal(scored.risk_score, expected);
   });

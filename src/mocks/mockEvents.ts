@@ -49,7 +49,7 @@ export function getMockEventsInRadius(lat: number, lon: number, radius: number):
   return MOCK_EVENTS.filter(event => {
     const distance = Math.sqrt(
       (event.location.lat - lat) ** 2 +
-      (event.location.lon - lon) ** 2
+      (event.location.lng - lon) ** 2
     );
     return distance <= radius;
   });

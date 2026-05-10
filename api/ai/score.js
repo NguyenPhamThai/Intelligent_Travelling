@@ -57,22 +57,37 @@ export default async function handler(req, res) {
 
   const fallbackScore = clampRiskScore(calculateRiskScore(event));
   let risk_score;
-  let source = 'ai_model';
-  let fallback_used = false;
+  let score_source = 'ai';
+  let fallback_used = process.env.FORCE_RULE_BASED_SCORING === '1';
+  let fallback_reason = undefined;
 
-  try {
-    risk_score = await scoreWithAiModel(event);
-  } catch {
-    // Shared scorer fallback is mandatory when model fails, times out, or returns invalid data.
+  if (fallback_used) {
     risk_score = fallbackScore;
-    source = 'shared_scorer';
-    fallback_used = true;
+    score_source = 'rule_based';
+    fallback_reason = 'forced_by_env';
+  }
+
+  if (!fallback_used) {
+    try {
+      risk_score = await scoreWithAiModel(event);
+    } catch (error) {
+      // Deterministic rule-based fallback is mandatory when model fails or times out.
+      risk_score = fallbackScore;
+      score_source = 'rule_based';
+      fallback_used = true;
+      fallback_reason = error.message.includes('timeout')
+        ? 'model_timeout'
+        : error.message.includes('HTTP')
+        ? 'model_http_error'
+        : 'model_unavailable';
+    }
   }
 
   if (!Number.isFinite(risk_score)) {
     risk_score = fallbackScore;
-    source = 'shared_scorer';
+    score_source = 'rule_based';
     fallback_used = true;
+    fallback_reason = 'invalid_score';
   }
 
   const safeScore = clampRiskScore(risk_score);
@@ -85,8 +100,10 @@ export default async function handler(req, res) {
 
   res.status(200).json({
     risk_score: safeScore,
-    source,
+    score_source,
+    source: score_source,
     fallback_used,
+    fallback_reason,
     threshold: getRiskLevel(safeScore),
     fallback_version: FALLBACK_VERSION,
   });
