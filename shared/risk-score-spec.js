@@ -13,12 +13,13 @@ export const UI_STATE_MAP = Object.freeze({
   error: 'error',
   success: 'success',
 });
+export const ALLOWED_TYPES = ['riot', 'crime', 'weather', 'conflict', 'natural_disaster', 'infrastructure', 'general'];
 
 export const EVENT_CONTRACT = Object.freeze({
   required: Object.freeze({
     id: 'string',
-    location: Object.freeze({ lat: 'number', lon: 'number' }),
-    type: 'riot|crime|weather',
+    location: Object.freeze({ lat: 'number', lng: 'number' }),
+    type: ALLOWED_TYPES.join('|'),
     severity: 'number',
     timestamp: 'number',
   }),
@@ -64,7 +65,6 @@ export const RISK_SCORE_SPEC = Object.freeze({
     },
   },
 });
-
 export function isFullEvent(event) {
   return (
     !!event &&
@@ -72,14 +72,12 @@ export function isFullEvent(event) {
     typeof event.id === 'string' &&
     typeof event.location === 'object' &&
     typeof event.location?.lat === 'number' &&
-    typeof event.location?.lon === 'number' &&
-    typeof event.type === 'string' &&
-    ['riot', 'crime', 'weather'].includes(event.type) &&
+    typeof event.location?.lon === 'number' || typeof event.location?.lng === 'number'&&
+    ALLOWED_TYPES.includes(event.type) &&
     typeof event.severity === 'number' &&
     typeof event.timestamp === 'number'
   );
 }
-
 export function hasRequiredScoreFields(event) {
   return (
     !!event &&
@@ -97,8 +95,6 @@ export function hasRequiredScoreFields(event) {
     Number.isFinite(event.timestamp)
   );
 }
-
 export { calculateRiskScore, clampRiskScore, getRiskLevel, sanitizeRiskScore };
-
 // Backward-compatible alias for older callers.
 export const getThreshold = getRiskLevel;
