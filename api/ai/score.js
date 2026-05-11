@@ -39,9 +39,12 @@ async function scoreWithAiModel(event) {
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
-    res.status(405).json({ error: 'Method not allowed' });
-    return;
+    return res.status(405).json({ error: 'Method not allowed' });
   }
+
+  // Tạo một bo huy de khong che thoi gian chay của AI
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 2500); // Demo chi nen chờ toi da 2.5s
 
   const event = req.body && typeof req.body === 'object' ? req.body : {};
   if (!hasRequiredScoreFields(event)) {
