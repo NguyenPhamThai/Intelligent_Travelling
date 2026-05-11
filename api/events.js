@@ -8,7 +8,7 @@
  *   - radius (optional, default: 50): Search radius in kilometers
  *   - page (optional, default: 1): Page number for pagination
  *   - page_size (optional, default: 20, max: 100): Items per page
- *   - sort (optional, default: occurred_at:desc): Sort order (occurred_at, risk_score)
+ *   - sort (optional, default: risk_score:desc): Sort order (occurred_at, risk_score)
  *
  * Response: {
  *   events: Event[],
@@ -26,7 +26,7 @@
 import { getCorsHeaders } from './_cors.js';
 import { jsonResponse } from './_json-response.js';
 import { calculateRiskScore, getRiskLevel } from '../shared/risk-score.js';
-import { readJsonFromUpstash, writeJsonToUpstash } from './_upstash-json.js';
+import { readJsonFromUpstash } from './_upstash-json.js';
 
 const DEFAULT_PAGE = 1;
 const DEFAULT_PAGE_SIZE = 10;
@@ -37,6 +37,16 @@ const CACHE_HIT_HEADER = 'HIT';
 const CACHE_MISS_HEADER = 'MISS';
 
 const IN_MEMORY_CACHE = new Map();
+
+const MAX_RADIUS_KM = 10000;
+const CACHE_TTL_SECONDS = 30;
+const REDIS_READ_TIMEOUT_MS = 3000;
+const REDIS_SET_TIMEOUT_MS = 3000;
+
+const SORT_FIELD_MAP = {
+  occurred_at: 'timestamp',
+  risk_score: 'risk_score',
+};
 
 // Cache key canonicalization
 export function buildCanonicalCacheKey(params) {
@@ -60,7 +70,7 @@ export function buildCanonicalCacheKey(params) {
     `radius:${radius}`,
     `page:${page}`,
     `page_size:${page_size}`,
-    `sort:${params.sort || 'occurred_at:desc'}`,
+    `sort:${params.sort || DEFAULT_SORT}`,
     `time_range:${time_range}`,
     `category:${category}`,
     `risk_level:${risk_level}`,
@@ -165,7 +175,7 @@ function normalizeEvent(rawEvent) {
 
   // Determine score source and fallback reason
   let score_source = 'rule_based';
-  let fallback_reason = undefined;
+  let fallback_reason;
   
   if (typeof rawEvent?.source === 'string' && rawEvent.source === 'ai') {
     score_source = 'ai';
@@ -176,7 +186,7 @@ function normalizeEvent(rawEvent) {
   return {
     id: typeof rawEvent?.id === 'string' && rawEvent.id ? rawEvent.id : `evt-default-${safeTimestamp}`,
     title: typeof rawEvent?.title === 'string' && rawEvent.title ? rawEvent.title : 'Unknown event',
-    location: { lat: safeLat, lng: safeLon },
+    location: { lat: safeLat, lng: safeLng, lon: safeLng },
     type: safeType,
     severity: Number.isFinite(Number(rawEvent?.severity)) ? Number(rawEvent.severity) : 0,
     timestamp: safeTimestamp,
@@ -251,20 +261,6 @@ export function addFreshnessMetadata(data, generatedAt) {
   };
 }
 
-const DEFAULT_PAGE = 1;
-const DEFAULT_PAGE_SIZE = 20;
-const MAX_PAGE_SIZE = 100;
-const MAX_RADIUS_KM = 10000;
-const CACHE_TTL_SECONDS = 30;
-const REDIS_READ_TIMEOUT_MS = 3000;
-const REDIS_SET_TIMEOUT_MS = 3000;
-const inMemoryCache = new Map();
-
-const SORT_FIELD_MAP = {
-  occurred_at: 'timestamp',
-  risk_score: 'risk_score',
-};
-
 const MOCK_EVENTS = [
   // RED (score > 70): High severity
   {
@@ -330,23 +326,7 @@ function haversineDistance(lat1, lon1, lat2, lon2) {
   return earthRadiusKm * c;
 }
 
-function getEventsInRadius(lat, lon, radiusKm) {
-  return MOCK_EVENTS.map((event) => ({
-    event,
-    distance: haversineDistance(lat, lon, event.location.lat, event.location.lng),
-  }))
-    .filter((entry) => entry.distance <= radiusKm)
-    .map((entry) => {
-      const riskScore = calculateRiskScore(entry.event);
-      return {
-        ...entry.event,
-        risk_score: riskScore,
-        source: 'rule_based',
-        fallback_used: false,
-        threshold: getRiskLevel(riskScore),
-      };
-    });
-}
+
 
 function validateCoordinates(lat, lon) {
   const latNum = toNumber(lat);
@@ -371,7 +351,7 @@ function enforceEventContract(event) {
     title: typeof event.title === 'string' ? event.title : '',
     location: {
       lat: typeof event.location?.lat === 'number' ? event.location.lat : 0,
-      lon: typeof event.location?.lon === 'number' ? event.location.lon : 0,
+      lng: typeof event.location?.lng === 'number' ? event.location.lng : 0,
     },
     type: typeof event.type === 'string' ? event.type : 'unknown',
     severity: Number.isFinite(event.severity) ? event.severity : 0,
@@ -404,7 +384,7 @@ function applySort(events, sort) {
 function getEventsInRadius(lat, lon, radiusKm) {
   return MOCK_EVENTS.map((event) => ({
     event,
-    distance: haversineDistance(lat, lon, event.location.lat, event.location.lon),
+    distance: haversineDistance(lat, lon, event.location.lat, event.location.lng ?? event.location.lon),
   }))
     .filter((entry) => entry.distance <= radiusKm)
     .map((entry) => {
@@ -448,7 +428,7 @@ async function readCache(cacheKey) {
   }
 }
 
-async function writeCache(cacheKey, payload) {
+async function writeCache(cacheKey, payload, ttlSeconds = CACHE_TTL_SECONDS) {
   const redisUrl = process.env.UPSTASH_REDIS_REST_URL;
   const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN;
   if (!redisUrl || !redisToken) {
@@ -458,7 +438,7 @@ async function writeCache(cacheKey, payload) {
   try {
     const encoded = encodeURIComponent(JSON.stringify(payload));
     const response = await fetch(
-      `${redisUrl}/set/${encodeURIComponent(cacheKey)}/${encoded}/EX/${CACHE_TTL_SECONDS}`,
+      `${redisUrl}/set/${encodeURIComponent(cacheKey)}/${encoded}/EX/${ttlSeconds}`,
       {
         method: 'POST',
         headers: { Authorization: `Bearer ${redisToken}` },
@@ -473,7 +453,7 @@ async function writeCache(cacheKey, payload) {
 }
 
 export function _clearEventsInMemoryCache() {
-  inMemoryCache.clear();
+  IN_MEMORY_CACHE.clear();
 }
 
 export const config = { runtime: 'edge' };
@@ -493,9 +473,6 @@ export default async function handler(request) {
   const latParam = url.searchParams.get('lat');
   const lonParam = url.searchParams.get('lon');
   const radiusParam = url.searchParams.get('radius');
-  const pageParam = url.searchParams.get('page');
-  const pageSizeParam = url.searchParams.get('page_size');
-  const sortParam = url.searchParams.get('sort');
 
   if (!latParam || !lonParam) {
     return jsonResponse({ error: 'Missing required parameters: lat and lon' }, 400, corsHeaders);
@@ -549,7 +526,7 @@ export default async function handler(request) {
     // Check Redis cache first.
     try {
       const cached = await readJsonFromUpstash(cacheKey);
-      if (cached && cached._freshness) {
+      if (cached?._freshness) {
         const age = Date.now() - cached._freshness.generated_at;
         const cacheHeaders = { ...baseHeaders, 'X-Cache': CACHE_HIT_HEADER };
         if (age < cached._freshness.max_age_seconds * 1000) {
@@ -613,14 +590,19 @@ export default async function handler(request) {
   if (!shouldBypassCache) {
     // Cache fresh data to Redis. If Redis fails, fallback to in-memory.
     try {
-      writeJsonToUpstash(cacheKey, freshData, ttl).catch((err) => {
-        setMemoryCache(cacheKey, freshData, ttl);
-        console.warn('Cache write failed:', err.message);
-      });
-
       const seedMetaKey = `seed-meta:${cacheKey}`;
       const seedMeta = { fetchedAt: Date.now(), recordCount: events.length };
-      writeJsonToUpstash(seedMetaKey, seedMeta, Math.max(60, ttl * 2)).catch((err) => console.warn('Seed-meta write failed:', err.message));
+      const [cacheWritten, seedMetaWritten] = await Promise.all([
+        writeCache(cacheKey, freshData, ttl),
+        writeCache(seedMetaKey, seedMeta, Math.max(60, ttl * 2)),
+      ]);
+
+      if (!cacheWritten) {
+        setMemoryCache(cacheKey, freshData, ttl);
+      }
+      if (!seedMetaWritten) {
+        console.warn('Seed-meta write failed:', seedMetaKey);
+      }
       return jsonResponse(freshData, 200, { ...responseHeaders, 'X-Cache': cacheDegraded ? CACHE_BYPASS_HEADER : CACHE_MISS_HEADER });
     } catch (err) {
       setMemoryCache(cacheKey, freshData, ttl);

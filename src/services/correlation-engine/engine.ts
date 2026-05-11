@@ -414,8 +414,8 @@ export class CorrelationEngine {
 
       const geoContext = card.countries.length > 0
         ? `Countries: ${card.countries.join(', ')}`
-        : card.location
-          ? `Location: ${card.location.label} (${card.location.lat.toFixed(2)}, ${card.location.lon.toFixed(2)})`
+          : card.location
+            ? `Location: ${card.location.label} (${card.location.lat.toFixed(2)}, ${card.location.lon.toFixed(2)})`
           : '';
 
       const resp = await this.intelligenceClient.deductSituation({ query, geoContext });

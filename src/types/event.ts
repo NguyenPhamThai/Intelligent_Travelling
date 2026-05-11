@@ -1,6 +1,6 @@
 export type Event = {
   id: string
-  location: { lat: number; lng: number }
+  location: { lat: number; lng: number; lon?: number }
   type: "weather" | "crime" | "riot"
   severity: number
   severity_level?: string

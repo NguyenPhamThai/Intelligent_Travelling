@@ -413,7 +413,7 @@ export class StrategicRiskPanel extends Panel {
         <div class="risk-section-title">${t('components.strategicRisk.recentAlerts', { count: String(this.alerts.length) })}</div>
         <div class="risk-alerts">
           ${displayAlerts.map(alert => {
-      const hasLocation = alert.location?.lat && alert.location.lon;
+      const hasLocation = alert.location?.lat && alert.location?.lon;
       const clickableClass = hasLocation ? 'risk-alert-clickable' : '';
       const locationAttrs = hasLocation
         ? `data-lat="${alert.location!.lat}" data-lon="${alert.location!.lon}"`

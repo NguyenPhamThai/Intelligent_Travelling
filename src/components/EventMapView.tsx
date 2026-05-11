@@ -5,7 +5,7 @@ interface MapEvent {
   id: string;
   title: string;
   type: string;
-  location: { lat: number; lon: number };
+  location: { lat: number; lng: number };
   risk_score: number;
   timestamp: number;
 }
@@ -83,7 +83,7 @@ const EventMarker = ({ event, onSelect }: { event: MapEvent; onSelect: (event: M
         <div style={{ fontWeight: 'bold' }}>{event.type.toUpperCase()}</div>
         <div style={{ fontSize: '12px', opacity: 0.9 }}>{event.title}</div>
         <div style={{ fontSize: '11px', opacity: 0.8 }}>
-          Score: {event.risk_score} | Lat: {event.location.lat.toFixed(2)}, Lon: {event.location.lon.toFixed(2)}
+          Score: {event.risk_score} | Lat: {event.location.lat.toFixed(2)}, Lng: {event.location.lng.toFixed(2)}
         </div>
       </div>
     </div>
@@ -93,14 +93,14 @@ const EventMarker = ({ event, onSelect }: { event: MapEvent; onSelect: (event: M
 const GridMapView = ({ events }: { events: MapEvent[] }) => {
   // Calculate bounding box
   const lats = events.map(e => e.location.lat);
-  const lons = events.map(e => e.location.lon);
+  const lngs = events.map(e => e.location.lng);
   const minLat = Math.min(...lats);
   const maxLat = Math.max(...lats);
-  const minLon = Math.min(...lons);
-  const maxLon = Math.max(...lons);
+  const minLng = Math.min(...lngs);
+  const maxLng = Math.max(...lngs);
 
   const latRange = maxLat - minLat || 1;
-  const lonRange = maxLon - minLon || 1;
+  const lngRange = maxLng - minLng || 1;
 
   const gridWidth = 60;
   const gridHeight = 20;
@@ -111,7 +111,7 @@ const GridMapView = ({ events }: { events: MapEvent[] }) => {
     .map(() => Array(gridWidth).fill(null));
 
   events.forEach(event => {
-    const x = Math.floor(((event.location.lon - minLon) / lonRange) * (gridWidth - 1));
+    const x = Math.floor(((event.location.lng - minLng) / lngRange) * (gridWidth - 1));
     const y = Math.floor(((maxLat - event.location.lat) / latRange) * (gridHeight - 1));
     if (x >= 0 && x < gridWidth && y >= 0 && y < gridHeight && grid[y] !== undefined) {
       const row = grid[y];
@@ -157,7 +157,7 @@ const GridMapView = ({ events }: { events: MapEvent[] }) => {
         </div>
       ))}
       <div style={{ marginTop: '8px', fontSize: '11px', color: '#888' }}>
-        Lat: [{minLat.toFixed(2)}, {maxLat.toFixed(2)}] | Lon: [{minLon.toFixed(2)}, {maxLon.toFixed(2)}]
+        Lat: [{minLat.toFixed(2)}, {maxLat.toFixed(2)}] | Lon: [{minLng.toFixed(2)}, {maxLng.toFixed(2)}]
       </div>
     </div>
   );
@@ -266,7 +266,7 @@ export const EventMapView = ({ events, loading, error, onEventSelect }: EventMap
             <span>Threshold:</span>
             <span>{getRiskLevel(selectedEvent.risk_score)}</span>
             <span>Location:</span>
-            <span>{selectedEvent.location.lat.toFixed(4)}, {selectedEvent.location.lon.toFixed(4)}</span>
+            <span>{selectedEvent.location.lat.toFixed(4)}, {selectedEvent.location.lng.toFixed(4)}</span>
             <span>Time:</span>
             <span>{new Date(selectedEvent.timestamp).toLocaleString()}</span>
           </div>

@@ -9,6 +9,7 @@ export type Event = {
   severity: number
   risk_score: number
   threshold: 'green' | 'yellow' | 'red'
+  fallback_used?: boolean
   timestamp: number
 }
 

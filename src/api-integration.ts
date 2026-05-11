@@ -161,7 +161,7 @@ export const USAGE_EXAMPLES = {
 export const ALERT_MESSAGES = {
   // Use for UI toast notifications, banners, etc.
   formatEventAlert: (event: Event): string => {
-    return `🚨 ${event.severity >= 8 ? 'CRITICAL' : 'WARNING'}: ${event.title} near ${event.location.lat.toFixed(2)}, ${event.location.lon.toFixed(2)}`;
+    return `🚨 ${event.severity >= 8 ? 'CRITICAL' : 'WARNING'}: ${event.title} near ${event.location.lat.toFixed(2)}, ${event.location.lng.toFixed(2)}`;
   },
 
   getRiskDescription: (riskScore: number): string => {

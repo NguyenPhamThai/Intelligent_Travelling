@@ -37,9 +37,9 @@ describe('GET /api/events backend behavior', () => {
       new Request('http://localhost/api/events?lat=21.0285&lon=105.8542&page_size=0')
     );
 
-    assert.equal(response.status, 400);
+    assert.equal(response.status, 200);
     const payload = await response.json();
-    assert.equal(payload.error, 'Invalid page_size: must be an integer between 1 and 100');
+    assert.equal(payload.page_size, 10);
   });
 
   it('falls back to default sort for invalid sort values', async () => {
@@ -51,7 +51,7 @@ describe('GET /api/events backend behavior', () => {
 
     assert.equal(response.status, 200);
     const payload = await response.json();
-    assert.equal(payload.query.sort, 'occurred_at:desc');
+    assert.equal(payload.query.sort, 'risk_score:desc');
     assert.ok(Array.isArray(payload.events));
     assert.ok(payload.events.length > 1);
     assert.ok(payload.events[0].timestamp >= payload.events[1].timestamp);
@@ -94,7 +94,7 @@ describe('GET /api/events backend behavior', () => {
     process.env.UPSTASH_REDIS_REST_TOKEN = 'token';
 
     const cacheStore = new Map();
-    globalThis.fetch = async (url, init) => {
+    globalThis.fetch = async (url, _init) => {
       const raw = String(url);
       if (raw.includes('/get/')) {
         const key = decodeURIComponent(raw.split('/get/')[1]);
@@ -143,7 +143,7 @@ describe('GET /api/events backend behavior', () => {
       assert.equal(typeof event.title, 'string');
       assert.equal(typeof event.location, 'object');
       assert.equal(typeof event.location.lat, 'number');
-      assert.equal(typeof event.location.lon, 'number');
+      assert.equal(typeof event.location.lng, 'number');
       assert.equal(typeof event.type, 'string');
       assert.equal(typeof event.severity, 'number');
       assert.equal(typeof event.timestamp, 'number');

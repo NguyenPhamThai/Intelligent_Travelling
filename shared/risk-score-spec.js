@@ -95,7 +95,7 @@ export function isFullEvent(event) {
     typeof event.id === 'string' &&
     typeof event.location === 'object' &&
     typeof event.location?.lat === 'number' &&
-    typeof event.location?.lng === 'number' &&
+    (typeof event.location?.lng === 'number' || typeof event.location?.lon === 'number') &&
     typeof event.type === 'string' &&
     ['riot', 'crime', 'weather'].includes(event.type) &&
     typeof event.severity === 'number' &&
@@ -115,7 +115,7 @@ export function hasRequiredScoreFields(event) {
     Number.isFinite(event.severity) &&
     typeof event.location === 'object' &&
     Number.isFinite(event.location?.lat) &&
-    Number.isFinite(event.location?.lng) &&
+    (Number.isFinite(event.location?.lng) || Number.isFinite(event.location?.lon)) &&
     typeof event.timestamp === 'number' &&
     Number.isFinite(event.timestamp)
   );

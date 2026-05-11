@@ -609,7 +609,7 @@ export class MapPopup {
           </div>
           <div class="popup-stat">
             <span class="stat-label">COORDINATES</span>
-            <span class="stat-value">${event.location.lat.toFixed(2)}°, ${(event.location.lng ?? event.location.lon ?? 0).toFixed(2)}°</span>
+            <span class="stat-value">${event.location.lat.toFixed(2)}°, ${(event.location.lng ?? 0).toFixed(2)}°</span>
           </div>
           <div class="popup-stat">
             <span class="stat-label">Time</span>

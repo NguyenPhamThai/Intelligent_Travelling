@@ -204,7 +204,7 @@ function protoItemToNewsItem(p: ProtoNewsItem): NewsItem {
       source: (p.threat.source || 'keyword') as 'keyword' | 'ml' | 'llm',
     } : undefined,
     ...(p.locationName && { locationName: p.locationName }),
-    ...(p.location && { lat: p.location.latitude, lon: p.location.longitude }),
+    ...(p.location && { lat: p.location.latitude, lng: p.location.longitude }),
   };
 }
 
@@ -693,9 +693,9 @@ export class DataLoaderManager implements AppModule {
     }
   }
 
-  private findFlashLocation(title: string): { lat: number; lon: number } | null {
+  private findFlashLocation(title: string): { lat: number; lng: number } | null {
     const tokens = tokenizeForMatch(title);
-    let bestMatch: { lat: number; lon: number; matches: number } | null = null;
+    let bestMatch: { lat: number; lng: number; matches: number } | null = null;
 
     const countKeywordMatches = (keywords: string[] | undefined): number => {
       if (!keywords) return 0;
@@ -712,14 +712,14 @@ export class DataLoaderManager implements AppModule {
     for (const hotspot of INTEL_HOTSPOTS) {
       const matches = countKeywordMatches(hotspot.keywords);
       if (matches > 0 && (!bestMatch || matches > bestMatch.matches)) {
-        bestMatch = { lat: hotspot.lat, lon: hotspot.lon, matches };
+        bestMatch = { lat: hotspot.lat, lng: hotspot.lon, matches };
       }
     }
 
     for (const conflict of CONFLICT_ZONES) {
       const matches = countKeywordMatches(conflict.keywords);
       if (matches > 0 && (!bestMatch || matches > bestMatch.matches)) {
-        bestMatch = { lat: conflict.center[1], lon: conflict.center[0], matches };
+        bestMatch = { lat: conflict.center[1], lng: conflict.center[0], matches };
       }
     }
 
@@ -747,7 +747,7 @@ export class DataLoaderManager implements AppModule {
       const location = this.findFlashLocation(item.title);
       if (!location) continue;
 
-      this.ctx.map.flashLocation(location.lat, location.lon);
+      this.ctx.map.flashLocation(location.lat, location.lng);
       this.mapFlashCache.set(cacheKey, now);
     }
   }

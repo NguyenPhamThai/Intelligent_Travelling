@@ -137,8 +137,8 @@ function nearestChokepoint(location?: GeoCoordinates): { id: string; distanceKm:
   if (!location) return null;
 
   let closest: { id: string; distanceKm: number } | null = null;
-  for (const cp of CHOKEPOINTS) {
-    const distanceKm = haversineKm(location.latitude, location.longitude, cp.lat, cp.lng);
+    for (const cp of CHOKEPOINTS) {
+      const distanceKm = haversineKm(location.latitude, location.longitude, cp.lat, cp.lon);
     if (!closest || distanceKm < closest.distanceKm) {
       closest = { id: cp.id, distanceKm };
     }
@@ -171,7 +171,7 @@ export function resolveChokepointId(input: { text: string; location?: GeoCoordin
     if (score <= 0) continue;
 
     const distanceKm = input.location
-      ? haversineKm(input.location.latitude, input.location.longitude, cp.lat, cp.lng)
+      ? haversineKm(input.location.latitude, input.location.longitude, cp.lat, cp.lon)
       : Number.POSITIVE_INFINITY;
 
     if (!best || score > best.score || (score === best.score && distanceKm < best.distanceKm)) {
