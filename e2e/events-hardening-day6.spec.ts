@@ -114,8 +114,9 @@ test('api response includes all required event fields', async ({ page }) => {
     const event = data.events[0];
     expect(event).toHaveProperty('id');
     expect(event).toHaveProperty('location');
-    expect(event).toHaveProperty('lat', event.location?.lat);
-    expect(event).toHaveProperty('lon', event.location?.lon);
+    expect(event.location).toHaveProperty('lat');
+    expect(event.location).toHaveProperty('lng');
+    expect(event.location).toHaveProperty('lon');
     expect(event).toHaveProperty('type');
     expect(event).toHaveProperty('severity');
     expect(event).toHaveProperty('risk_score');
@@ -245,21 +246,21 @@ test('risk_score thresholds match UI color mapping', async ({ page }) => {
 });
 
 /**
- * Test 10: Location normalization (always uses lon, not lng)
+ * Test 10: Location normalization (provides both lng and lon for compatibility)
  */
-test('event location uses "lon" not "lng"', async ({ page }) => {
+test('event location includes both lng and lon for compatibility', async ({ page }) => {
   const response = await page.request.get(
     `${API_BASE}/api/events?lat=21.0285&lon=105.8542&radius=10000&page=1&page_size=10`
   );
-  
+
   const data = await response.json();
-  
+
   for (const event of data.events) {
-    // Verify "lon" is present
+    // Verify both "lon" and "lng" are present (for cross-system compatibility)
     expect(event.location).toHaveProperty('lon');
+    expect(event.location).toHaveProperty('lng');
     expect(typeof event.location.lng).toBe('number');
-    
-    // Verify "lng" is NOT present
-    expect(event.location).not.toHaveProperty('lng');
-  }
+    expect(typeof event.location.lon).toBe('number');
+    // They should be equal
+    expect(event.location.lng).toBe(event.location.lon);
 });

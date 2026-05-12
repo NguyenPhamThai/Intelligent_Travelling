@@ -398,7 +398,7 @@ function shouldMergeAlerts(a: UnifiedAlert, b: UnifiedAlert): boolean {
   const sameLocation = !!(
     a.location &&
     b.location &&
-    haversineDistance(a.location.lat, a.location.lon, b.location.lat, b.location.lon) <
+    haversineDistance(a.location.lat, a.location.lng ?? a.location.lon, b.location.lat, b.location.lng ?? b.location.lon) <
       ALERT_MERGE_DISTANCE_KM
   );
 

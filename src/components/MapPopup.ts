@@ -580,10 +580,10 @@ export class MapPopup {
   }
 
   private renderEventPopup(event: EventPopupData): string {
-    const riskClass = event.risk_score ? 
-      (event.risk_score >= 80 ? 'high' : event.risk_score >= 50 ? 'medium' : 'low') : 
-      'unknown';
-    const riskLabel = event.risk_score ? `${Math.round(event.risk_score)}%` : 'N/A';
+    const riskClass = Number.isFinite(event.risk_score) 
+      ? (event.risk_score >= 80 ? 'high' : event.risk_score >= 50 ? 'medium' : 'low') 
+      : 'unknown';
+    const riskLabel = Number.isFinite(event.risk_score) ? `${Math.round(event.risk_score)}%` : 'N/A';
     const severityLabel = `Level ${event.severity}`;
     const eventTime = new Date(event.timestamp).toLocaleString();
     
