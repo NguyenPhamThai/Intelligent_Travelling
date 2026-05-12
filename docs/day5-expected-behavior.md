@@ -10,5 +10,6 @@ Owner: BA + Tester
 | Cache unavailable (Redis down) | Continue serving response via compute and in-memory fallback; set `X-Cache: BYPASS` | No UI crash, normal list/map render | Internal debug header only | `tests/events-day5-regression.test.mjs` (Redis-down case) |
 
 Notes:
+
 - Tester can derive test cases directly from this table without additional clarification.
 - UI message consistency is mandatory for demo stability.

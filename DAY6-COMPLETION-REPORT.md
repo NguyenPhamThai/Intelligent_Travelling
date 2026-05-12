@@ -6,7 +6,9 @@
 
 All Day 6 hardening deliverables have been **completed and tested**. The system is now production-ready with graceful fallback behavior, comprehensive schema validation, and full E2E test coverage.
 
+
 ### Key Achievements
+
 - ✅ Backend: Full metadata & fallback handling
 - ✅ Frontend: Schema guards & error handling  
 - ✅ AI: Deterministic fallback scoring
@@ -15,10 +17,13 @@ All Day 6 hardening deliverables have been **completed and tested**. The system 
 
 ---
 
+
 ## 1. BACKEND HARDENING ✅
+
 
 ### `/api/events.js` Changes
 **Purpose:** Ensure `/events` never crashes due to AI failures; include scoring metadata
+
 
 #### Code Changes
 ```javascript
@@ -41,6 +46,7 @@ return {
 };
 ```
 
+
 #### Response Headers Added
 ```
 X-Cache: HIT|MISS|BYPASS
@@ -48,6 +54,7 @@ X-Score-Source: ai|rule_based|mixed
 X-Fallback-Count: <count of fallback-scored events>
 X-AI-Score-Count: <count of AI-scored events>
 ```
+
 
 #### Metadata Response
 ```json
@@ -78,8 +85,10 @@ X-AI-Score-Count: <count of AI-scored events>
 }
 ```
 
+
 ### `/api/ai/score.js` Changes
 **Purpose:** Add detailed fallback reason codes; maintain stable response shape
+
 
 #### Enhanced Response
 ```json
@@ -94,6 +103,7 @@ X-AI-Score-Count: <count of AI-scored events>
 }
 ```
 
+
 #### Fallback Reason Codes
 | Reason | Scenario |
 |--------|----------|
@@ -103,8 +113,10 @@ X-AI-Score-Count: <count of AI-scored events>
 | `model_unavailable` | AI_SCORE_MODEL_URL not set |
 | `invalid_score` | AI returned NaN or non-number |
 
+
 ### `/shared/risk-score-spec.js` Changes
 **Purpose:** Document complete API contract and examples
+
 
 #### Added Documentation
 ```javascript
@@ -129,14 +141,18 @@ export const RISK_SCORE_SPEC = Object.freeze({
 });
 ```
 
+
 ---
 
+
 ## 2. FRONTEND HARDENING ✅
+
 
 ### Schema Normalization (Already Verified)
 - Location always uses `lon` (never `lng`)
 - Risk score guard: Checks `typeof score === 'number'` before rendering
 - Demo HTML safely handles risk_score === 0 (renders as green badge)
+
 
 ### Error Handling (Already In Place)
 ```javascript
@@ -155,9 +171,12 @@ try {
 - Network errors: Caught and displayed
 - Invalid filters: Gracefully ignored
 
+
 ---
 
+
 ## 3. AI ENGINEERING ✅
+
 
 ### Timeout Protection
 ```javascript
@@ -166,7 +185,9 @@ const controller = new AbortController();
 const timeout = setTimeout(() => controller.abort(), MODEL_TIMEOUT_MS);
 ```
 
+
 ### Fallback Determinism
+
 - **Always returns valid score** (0-100)
 - **Reproducible logic**: `severity × typeWeight × 100`
 - **Metric tracking**: 'ai.fallback_used' incremented
@@ -178,11 +199,15 @@ crime:   0.8  →
 weather: 0.5  →
 ```
 
+
 ---
+
 
 ## 4. TESTING ✅
 
+
 ### Updated Tests
+
 
 #### `tests/events-contract-lock.test.mjs` (Enhanced)
 ```javascript
@@ -197,6 +222,7 @@ assertEventShape() now validates:
 - fallback_reason is string or undefined
 ```
 
+
 #### `tests/ai-score-fallback.test.mjs` (NEW - 5 tests)
 ```javascript
 ✓ returns valid risk_score even on AI model timeout
@@ -206,9 +232,12 @@ assertEventShape() now validates:
 ✓ clamps risk_score to 0-100 range
 ```
 
+
 ### E2E Test Suite: `e2e/events-hardening-day6.spec.ts` (NEW - 10 tests)
 
+
 #### Test Coverage
+
 1. **Smoke Test** - Events list renders with data
 2. **Risk Score 0** - Green threshold (0-30) renders correctly
 3. **Empty Data** - Graceful "No events" message
