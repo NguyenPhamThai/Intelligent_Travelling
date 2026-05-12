@@ -55,7 +55,7 @@ const EventMarker = ({ event, onSelect }: { event: MapEvent; onSelect: (event: M
   const color = RISK_COLORS[threshold as keyof typeof RISK_COLORS];
 
   return (
-    <div
+    <button
       style={{
         display: 'flex',
         alignItems: 'center',
@@ -70,12 +70,13 @@ const EventMarker = ({ event, onSelect }: { event: MapEvent; onSelect: (event: M
         transition: 'transform 0.2s',
         marginBottom: '8px',
       }}
+      type="button"
       onClick={() => onSelect(event)}
       onMouseEnter={(e) => {
-        (e.currentTarget as HTMLElement).style.transform = 'scale(1.05)';
+        (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1.05)';
       }}
       onMouseLeave={(e) => {
-        (e.currentTarget as HTMLElement).style.transform = 'scale(1)';
+        (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1)';
       }}
     >
       {color.symbol}
@@ -86,7 +87,7 @@ const EventMarker = ({ event, onSelect }: { event: MapEvent; onSelect: (event: M
           Score: {event.risk_score} | Lat: {event.location.lat.toFixed(2)}, Lng: {event.location.lng.toFixed(2)}
         </div>
       </div>
-    </div>
+    </button>
   );
 };
 
