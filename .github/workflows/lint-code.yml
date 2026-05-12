@@ -17,7 +17,9 @@ jobs:
         with:
           node-version: '22'
           cache: 'npm'
-      - run: npm ci
+      - name: Pin npm 11.11.0
+        run: npm install -g npm@11.11.0
+      - run: npm ci --ignore-scripts
       - run: npm run lint:unicode
       - run: npm run lint
       - run: npm run lint:boundaries

@@ -77,6 +77,8 @@ jobs:
         with:
           node-version: '22'
           cache: 'npm'
+      - name: Pin npm 11.11.0
+        run: npm install -g npm@11.11.0
 
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@631a55b12751854ce901bb631d5902ceb48146f7

@@ -19,6 +19,8 @@ jobs:
         with:
           node-version: '22'
           cache: 'npm'
+      - name: Pin npm 11.11.0
+        run: npm install -g npm@11.11.0
       - run: npm ci
       - run: npm run typecheck
       - run: npm run typecheck:api
