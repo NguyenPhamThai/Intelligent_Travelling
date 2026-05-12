@@ -3,7 +3,6 @@
 Date: 2026-05-09
 Owner: Leader
 
-
 ## Go/No-Go Gates
 
 - [x] No stale/leak risk in cache keying (query-affecting params included).
@@ -11,7 +10,6 @@ Owner: Leader
 - [x] Cache behavior observable via `X-Cache` header.
 - [x] Contract lock tests present for `/api/events`.
 - [x] Regression suite covers pagination + cache + fallback + empty flow.
-
 
 ## Evidence
 
@@ -22,7 +20,6 @@ Owner: Leader
 - `docs/day5-scope-freeze.md`
 - `docs/day5-expected-behavior.md`
 
-
 ## Rollback / Safe Mode Switches (no code redeploy)
 
 - Disable Redis cache path:
@@ -31,7 +28,6 @@ Owner: Leader
   - `FORCE_RULE_BASED_SCORING=1`
 - Force fixed safe page size:
   - `EVENTS_SAFE_PAGE_SIZE=10`
-
 
 ## Operational Drill (target < 1 minute)
 
