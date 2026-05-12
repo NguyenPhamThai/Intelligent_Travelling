@@ -471,6 +471,7 @@ Number.isFinite(Number(rawEvent?.location?.lng ?? rawEvent?.location?.lon))
 This silently accepts both but can lead to subtle cross-system bugs if callers send misnamed fields.
 
 **Impact:** HIGH
+
 - Frontend sends `lng`, API expects `lon` or `lng`
 - Tests use `lon`, validators expect `lng`
 - Proto uses `latitude`/`longitude`
@@ -568,6 +569,7 @@ location: { lat: number; lng: number }  // All TypeScript types
 ```
 
 **Files to update:**
+
 1. [`shared/safety-types.ts`](shared/safety-types.ts): Change `lon` → `lng`
 2. [`api/events.js`](api/events.js): Remove fallback handling, enforce `lng`
 3. [`src/mocks/mockEvents.ts`](src/mocks/mockEvents.ts): Change `lon` → `lng`
@@ -590,6 +592,7 @@ risk_score: number  // Always populated by API
 **Rationale:** API always includes it after scoring; frontend should treat as required.
 
 **Files to update:**
+
 1. [`src/types/event.ts`](src/types/event.ts)
 2. Add type guard in API response handler
 
@@ -606,6 +609,7 @@ type: "weather" | "crime" | "riot" | "conflict" | "cyber" | "military" | "tech"
 ```
 
 **Files to update:**
+
 1. [`src/types/event.ts`](src/types/event.ts)
 2. [`shared/risk-score-spec.js`](shared/risk-score-spec.js): Extend type weights
 3. Update risk score formula for new types
@@ -625,6 +629,7 @@ const frontendEvent: Event = {
 ```
 
 **Files to update:**
+
 1. Create [`src/utils/event-mapper.ts`](src/utils/event-mapper.ts)
 2. Update API handlers to use mapper
 

@@ -37,6 +37,7 @@ Pagination and sorting are auxiliary transport concerns. They must not change bu
 - Broader event schema redesign: out of scope.
 
 ## Sign-off Checklist
+
 - [x] Backend sign-off
 - [x] Frontend sign-off
 - [x] Tester sign-off
